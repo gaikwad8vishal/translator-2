@@ -1,20 +1,18 @@
-const TranslationHistory = require("../models/TranslationHistory");
+const axios = require("axios");
 
-exports.saveTranslation = async (req, res) => {
-  try {
-    const { sourceLanguage, targetLanguage, originalText, translatedText } = req.body;
+exports.translateText = async (req, res) => {
+    const { text, from, to } = req.body;  // ✅ Body se data lo
 
-    const newHistory = new TranslationHistory({
-      userId: req.user.id, // Ye user ka ID middleware se aayega
-      sourceLanguage,
-      targetLanguage,
-      originalText,
-      translatedText,
-    });
+    if (!text || !from || !to) {
+        return res.status(400).json({ error: "Missing parameters" });
+    }
 
-    await newHistory.save();
-    res.status(201).json({ message: "Translation saved successfully!" });
-  } catch (error) {
-    res.status(500).json({ message: "Server error", error });
-  }
+    try {
+        const response = await axios.get(
+            `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${from}|${to}`
+        );
+        res.json({ translatedText: response.data.responseData.translatedText });
+    } catch (error) {
+        res.status(500).json({ error: "Translation failed" });
+    }
 };

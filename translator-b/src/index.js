@@ -3,6 +3,7 @@ const dotenv = require("dotenv");
 const mongoose = require("mongoose");
 const userRoutes = require("./routes/userRoutes");
 const cors = require("cors");
+const translationRoutes = require("./routes/translationRoutes")
 
 
 dotenv.config();
@@ -16,6 +17,12 @@ mongoose.connect(process.env.MONGO_URI, {
   useUnifiedTopology: true,
 });
 
-app.use("/api/users", userRoutes);
+
+
+app.use("/translate", translationRoutes);  // 👈 Translation routes add kiya
+
+
+
+app.use("/users", userRoutes);
 
 app.listen(3001, () => console.log("Server running on port 3001 🚀"));
