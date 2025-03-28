@@ -2,7 +2,7 @@ const axios = require("axios");
 
 const translateText = async (text, sourceLang, targetLang) => {
   try {
-    const response = await axios.post("https://libretranslate.com/translate", {
+    const response = await axios.post("https://localhost:5050/api/translate", {
       q: text,
       source: sourceLang,
       target: targetLang,
