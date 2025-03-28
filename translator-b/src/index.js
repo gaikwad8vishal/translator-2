@@ -1,20 +1,21 @@
 const express = require("express");
-const connectDB = require("./config/db");
-const PORT = process.env.PORT || 3001;
+const dotenv = require("dotenv");
+const mongoose = require("mongoose");
+const userRoutes = require("./routes/userRoutes");
+const cors = require("cors");
+
+
+dotenv.config();
 const app = express();
 app.use(express.json());
-const translationRoutes = require("./routes/translationRoutes");
-
-// MongoDB Connect
-connectDB();
-
-// Routes
-
-app.use("/api", translationRoutes);
-
-app.use("/api/users", require("./routes/userRoutes"));
+app.use(cors({ origin: "http://localhost:5173" })); // React Vite
 
 
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+});
 
+app.use("/api/users", userRoutes);
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT} 🚀`));
+app.listen(3001, () => console.log("Server running on port 3001 🚀"));

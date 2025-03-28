@@ -1,19 +1,20 @@
-const { translateText } = require("../config/googleTranslate");
+const TranslationHistory = require("../models/TranslationHistory");
 
-const translateController = async (req, res) => {
-    const { text, targetLanguage } = req.body;
+exports.saveTranslation = async (req, res) => {
+  try {
+    const { sourceLanguage, targetLanguage, originalText, translatedText } = req.body;
 
-    if (!text || !targetLanguage) {
-        return res.status(400).json({ error: "Text and targetLanguage are required!" });
-    }
+    const newHistory = new TranslationHistory({
+      userId: req.user.id, // Ye user ka ID middleware se aayega
+      sourceLanguage,
+      targetLanguage,
+      originalText,
+      translatedText,
+    });
 
-    const translatedText = await translateText(text, targetLanguage);
-
-    if (translatedText) {
-        return res.json({ translatedText });
-    } else {
-        return res.status(500).json({ error: "Translation failed!" });
-    }
+    await newHistory.save();
+    res.status(201).json({ message: "Translation saved successfully!" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
 };
-
-module.exports = { translateController };
