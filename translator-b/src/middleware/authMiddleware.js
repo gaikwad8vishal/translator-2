@@ -1,17 +1,21 @@
 const jwt = require("jsonwebtoken");
 
-exports.protect = (req, res, next) => {
-  try {
-    const token = req.headers.authorization?.split(" ")[1];
+const authMiddleware = (req, res, next) => {
+    const authHeader = req.header("Authorization");
 
-    if (!token) {
-      return res.status(401).json({ message: "Unauthorized, token missing" });
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return res.status(401).json({ error: "Access Denied! No Token Provided." });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // User ka data middleware ke through pass hoga
-    next();
-  } catch (error) {
-    res.status(401).json({ message: "Unauthorized, invalid token" });
-  }
+    const token = authHeader.split(" ")[1]; // "Bearer token_value" se token extract karo
+
+    try {
+        const verified = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = verified; // User data request mein daal diya
+        next();
+    } catch (err) {
+        return res.status(401).json({ error: "Invalid Token!" });
+    }
 };
+
+module.exports = authMiddleware;
