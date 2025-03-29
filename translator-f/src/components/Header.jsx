@@ -8,7 +8,6 @@ const Header = () => {
   const { user, logout } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
-  console.log(localStorage.getItem("user"));
 
   useEffect(() => {
     function handleClickOutside(event) {

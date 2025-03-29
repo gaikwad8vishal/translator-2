@@ -296,43 +296,73 @@ export default Translator;
 
 
 
+
 const HistorySidebar = ({ isOpen, setIsOpen }) => {
   const [history, setHistory] = useState([]);
 
+  // ✅ Function to fetch history
+  const fetchHistory = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      const response = await axios.get("http://localhost:3001/history/all", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setHistory(response.data);
+    } catch (error) {
+      console.error("Error fetching history:", error);
+    }
+  };
+
+  // ✅ Function to delete history item
+  const deleteHistoryItem = async (id) => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      await axios.delete(`http://localhost:3001/history/delete/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setHistory((prev) => prev.filter((item) => item._id !== id));
+    } catch (error) {
+      console.error("Error deleting history:", error);
+    }
+  };
+
+  // ✅ Fetch history only when the sidebar opens
   useEffect(() => {
-    const fetchHistory = async () => {
-      try {
-        const token = localStorage.getItem("token"); // ✅ Token fetch karo
-        if (!token) return; // Agar token nahi hai toh request mat bhejo
-
-        const response = await axios.get("http://localhost:3001/history", {
-          headers: {
-            Authorization: `Bearer ${token}`, // ✅ Token add kiya header mein
-          },
-        });
-
-        setHistory(response.data); // ✅ History state update
-      } catch (error) {
-        console.error("Error fetching history:", error);
-      }
-    };
-
     if (isOpen) fetchHistory();
   }, [isOpen]);
 
   return (
-    <div className={`fixed top-0 right-0 h-full w-80 bg-white shadow-lg transform transition-transform duration-300 p-4 ${isOpen ? "translate-x-0" : "translate-x-full"}`}>
+    <div
+      className={`fixed top-0 right-0 h-full w-80 bg-white shadow-lg transform transition-transform duration-300 p-4 ${
+        isOpen ? "translate-x-0" : "translate-x-full"
+      }`}
+    >
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold text-purple-800">History</h2>
-        <button className="text-gray-600" onClick={() => setIsOpen(false)}>✖</button>
+        <button className="text-gray-600" onClick={() => setIsOpen(false)}>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
+          </svg>
+        </button>
       </div>
       {history.length === 0 ? (
         <p className="text-gray-500">No history available</p>
       ) : (
         <ul>
-          {history.map((item, index) => (
-            <li key={index} className="p-2 border-b text-sm text-gray-700">
-              {item.input} ({item.from}) → {item.translation} ({item.to})
+          {history.map((item) => (
+            <li key={item._id} className="p-2 border-b text-sm text-gray-700 flex justify-between">
+              <span>{item.input} ({item.from}) → {item.translation} ({item.to})</span>
+              <button onClick={() => deleteHistoryItem(item._id)} className="text-gray-800 text-xs">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5"   stroke="currentColor" className="size-6">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
             </li>
           ))}
         </ul>
