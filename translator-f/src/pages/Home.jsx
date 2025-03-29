@@ -147,10 +147,7 @@ const Translator = () => {
   const translateText = async (inputText) => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("token"); // ✅ Token uthao
-      if (!token) return; // ✅ Agar token nahi toh request mat bhejo
-  
-      const response = await axios.post("http://localhost:3001/translate", {
+      const response = await axios.post("http://localhost:3001/translate/", {
         text: inputText,
         from,
         to,
@@ -159,22 +156,24 @@ const Translator = () => {
       setLoading(false);
       setTranslatedText(response.data.translatedText);
   
-      // ✅ Automatically Save History After Translation
-      await axios.post(
-        "http://localhost:3001/history/save",
-        {
-          input: inputText,
-          translation: response.data.translatedText,
-          from,
-          to,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`, // ✅ Token add kiya
+      // ✅ Check if user is logged in before saving history
+      const token = localStorage.getItem("token");
+      if (token) {
+        await axios.post(
+          "http://localhost:3001/history/save",
+          {
+            input: inputText,
+            translation: response.data.translatedText,
+            from,
+            to,
           },
-        }
-      );
-  
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+      }
     } catch (error) {
       setLoading(false);
       console.error("Translation error:", error);
