@@ -25,8 +25,6 @@ exports.signup = async (req, res) => {
 
 
 
-
-
 exports.signin = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -41,7 +39,12 @@ exports.signin = async (req, res) => {
       expiresIn: "7d",
     });
 
-    res.status(200).json({ message: "Login successful", token });
+    // 👇 User info return karo
+    res.status(200).json({
+      message: "Login successful",
+      token,
+      user: { id: user._id, name: user.name, email: user.email }, // Yeh line add ki
+    });
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
   }
