@@ -17,14 +17,14 @@ const SignUp = () => {
     setError("");
 
     try {
-      const response = await axios.post("http://localhost:3001/api/users/signup", {
+      const response = await axios.post("http://localhost:3001/users/signup", {
         name,
         email,
         password,
       });
 
       localStorage.setItem("token", response.data.token);
-      navigate("/"); // Redirect to Home after signup
+      navigate("/signin"); // Redirect to Home after signup
     } catch (err) {
       setError("Signup failed. Try again.");
     } finally {

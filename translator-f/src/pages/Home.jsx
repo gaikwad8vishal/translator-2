@@ -48,61 +48,61 @@ const Translator = () => {
   const [text, setText] = useState("");
   const [translatedText, setTranslatedText] = useState("");
   const [from, setFrom] = useState("en");
-  const [to, setTo] = useState("hi");
+  const [to, setTo] = useState("en");
   const textareaRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [height, setHeight] = useState("auto");
-
-
-  const setLanguageByState = (state) => {
-    const stateToLang = {
-      Maharashtra: "mr", // Marathi
-      Gujarat: "gu", // Gujarati
-      Karnataka: "kn", // Kannada
-      Telangana: "te", // Telugu
-      Punjab: "pa", // Punjabi
-      Rajasthan: "hi", // Hindi
-      Kerala: "ml", // Malayalam
-    };
-  
-    setTo(stateToLang[state] || "hi"); // Default Hindi if state not found
-  };
-
-
-  const getStateFromCoords = async (lat, lon) => {
-    try {
-      const res = await axios.get(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`
-      );
-      const state = res.data.address.state; // Extract state name
-      console.log("User's State:", state);
-      setLanguageByState(state);
-    } catch (error) {
-      console.error("Reverse geocoding error:", error);
-    }
-  };
-  
+  const [detectedLanguage, setDetectedLanguage] = useState("en"); // Default English
 
 
   useEffect(() => {
-    const getLocation = () => {
+    const getUserLocation = () => {
       if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const { latitude, longitude } = position.coords;
-            getStateFromCoords(latitude, longitude); // Call function to get state
-            console.log(longitude,latitude)
-          },
-          (error) => console.error("Geolocation error:", error),
-          { enableHighAccuracy: true }
-        );
+        navigator.geolocation.getCurrentPosition(async (position) => {
+          const { latitude, longitude } = position.coords;
+          fetchLocationAndSetLanguage(latitude, longitude);
+        });
       }
     };
   
-    getLocation();
-  }, []);
+    const fetchLocationAndSetLanguage = async (lat, lon) => {
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`
+        );
+        const data = await response.json();
+        const state = data.address?.state;
   
+        // State-wise language mapping
+        const stateToLanguage = {
+          "Maharashtra": "mr",
+          "Uttar Pradesh": "hi",
+          "West Bengal": "bn",
+          "Tamil Nadu": "ta",
+          "Gujarat": "gu",
+          "Karnataka": "kn",
+          "Rajasthan": "hi",
+          "Punjab": "pa",
+          "Bihar": "hi",
+          "Kerala": "ml",
+          "Telangana": "te",
+          "Andhra Pradesh": "te",
+          "Madhya Pradesh": "hi",
+          "Odisha": "or",
+        };
+  
+        const detectedLang = stateToLanguage[state] || "en"; // Default to English if state not found
+        setDetectedLanguage(detectedLang);
+        setFrom(detectedLang); // Set initial language based on detection
+      } catch (error) {
+        console.error("Error fetching location:", error);
+      }
+    };
+  
+    getUserLocation();
+  }, []);
+
   
   const handleCopy = () => {
     if (!translatedText) return;
@@ -150,7 +150,6 @@ const Translator = () => {
         to,
       });
       setLoading(false)
-
       setTranslatedText(response.data.translatedText);
     } catch (error) {
       console.error("Translation error:", error);
@@ -167,48 +166,48 @@ const Translator = () => {
 
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-100 p-4">
-      <div className="bg-white p-6 rounded-2xl shadow-2xl w-full  transition-all">
+      <div className="bg-white p-6 rounded-2xl mt-72 sm:mt-0 shadow-2xl w-full  transition-all">
         <h1 className="text-3xl font-bold text-center mb-4 flex items-center justify-center gap-2">
           <Languages className="text-purple-700" />
            <div className="text-purple-700">Translator</div> 
         </h1>
 
-        <div className=" flex justify-between mb-4">
-        <select
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-            className="border p-3 rounded-lg w-2xl pr-2  text-gray-700 ">
-            {languages
-              .sort((a, b) => a.name.localeCompare(b.name)) // Alphabetical Sorting
-              .map((lang) => (
-                <option key={lang.code} value={lang.code}>
-                  {lang.name}
-                </option>
-              ))}
-          </select>
+        <div className="flex flex-col sm:flex-row justify-between gap-4 mb-4">
+              {/* From Language Select */}
+              <select
+                value={from} 
+                onChange={(e) => setFrom(e.target.value)}
+                className="border p-3 rounded-lg w-full sm:w-1/3 text-gray-700"
+              >
+                {languages
+                  .sort((a, b) => a.name.localeCompare(b.name)) 
+                  .map((lang) => (
+                    <option key={lang.code} value={lang.code}>
+                      {lang.name}
+                    </option>
+                  ))}
+              </select>
+              {/* Swap Button */}
+              <button
+                onClick={swapLanguages}
+                className="p-3 rounded-full hover:bg-gray-200 transition self-center sm:self-auto">
+                <ArrowLeftRight className="text-gray-600" />
+              </button>
 
-
-          <button
-            onClick={swapLanguages}
-            className="p-3   rounded-full hover:bg-gray-200 transition"
-          >
-            <ArrowLeftRight className="text-gray-600" />
-          </button>
-
-          <select
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            className="border p-3 rounded-lg w-2xl pr-2  text-gray-700 "
-          >
-            {languages
-              .sort((a, b) => a.name.localeCompare(b.name)) // Alphabetical Sorting
-              .map((lang) => (
-                <option key={lang.code} value={lang.code}>
-                  {lang.name}
-                </option>
-              ))}
-          </select>
-        </div>
+              {/* To Language Select */}
+              <select
+                value={to}
+                onChange={(e) => setTo(e.target.value)}
+                className="border p-3 rounded-lg w-full sm:w-1/3 text-gray-700">
+                {languages
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .map((lang) => (
+                    <option key={lang.code} value={lang.code}>
+                      {lang.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
         <div className="flex gap-4 grid grid-cols-1 sm:grid-cols-2 ">
         <div className="relative ">
           <textarea
@@ -231,8 +230,7 @@ const Translator = () => {
           )}
         </div>
             <div 
-              className="relative border p-3 w-full min-h-40 rounded-lg bg-gray-100 transition-all 
-             whitespace-normal break-words overflow-hidden"
+              className="relative border p-3   min-h-40 rounded-lg bg-gray-100 transition-all"
               style={{ height }} 
             >
               {/* Copy Button */}
@@ -255,9 +253,13 @@ const Translator = () => {
               )}
             </div>
           </div>
+
+        </div>
+        <div className="">
+          hi
         </div>
       </div>
-  );
+  );  
 };
 
 export default Translator;

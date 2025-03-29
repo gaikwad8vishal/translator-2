@@ -10,26 +10,40 @@ const SignIn = () => {
 
   const navigate = useNavigate();
 
-  const handleSignIn = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
 
-    try {
-      const response = await axios.post("http://localhost:3001/api/users/signin", {
-        email,
-        password,
-      });
+const handleSignIn = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  
+  try {
+    setError(""); // Yaha setError clear kar raha hai
+    
+    const response = await axios.post("http://localhost:3001/users/signin", {
+      email,
+      password,
+    });
 
-      localStorage.setItem("token", response.data.token);
-      navigate("/"); // Redirect to Home after login
-    } catch (err) {
-      setError("Invalid email or password");
-    } finally {
-      setLoading(false);
-    }
-  };
+    const { token, user } = response.data;
 
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify(user));
+    navigate("/"); // ✅ Redirect user first
+      setTimeout(() => {
+        window.location.reload(); // ✅ Then refresh page
+      }, 50);
+
+    setUser(user); // Context update
+    
+    ; // Redirect to home
+    
+  } catch (err) {setTimeout(() => {}, 15)
+    setError("Invalid email or password");
+  } finally {
+    setLoading(false);
+  }
+};
+
+  
   return (
     <div className="flex justify-center items-center h-screen bg-gray-100">
       <div className="bg-white p-6 rounded-lg shadow-lg w-96">
