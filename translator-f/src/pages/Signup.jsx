@@ -25,6 +25,7 @@ const SignUp = () => {
 
       localStorage.setItem("token", response.data.token);
       navigate("/signin"); // Redirect to Home after signup
+      
     } catch (err) {
       setError("Signup failed. Try again.");
     } finally {

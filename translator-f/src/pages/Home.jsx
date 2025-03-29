@@ -2,7 +2,7 @@ import axios from "axios";
 import { ArrowLeftRight, Languages } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Clipboard, ClipboardCheck } from "lucide-react";
-
+import { FaHistory, FaTimes } from "react-icons/fa";
 
 
 const languages = [
@@ -54,6 +54,9 @@ const Translator = () => {
   const [copied, setCopied] = useState(false);
   const [height, setHeight] = useState("auto");
   const [detectedLanguage, setDetectedLanguage] = useState("en"); // Default English
+  const [ isOpen, setIsOpen] = useState(false)
+  const [history, setHistory] = useState([]);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false)
 
 
   useEffect(() => {
@@ -75,7 +78,7 @@ const Translator = () => {
         const state = data.address?.state;
   
         // State-wise language mapping
-        const stateToLanguage = {
+        const stateToLanguage = { 
           "Maharashtra": "mr",
           "Uttar Pradesh": "hi",
           "West Bengal": "bn",
@@ -142,20 +145,43 @@ const Translator = () => {
   }, [text, from, to]);
 
   const translateText = async (inputText) => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const response = await axios.post("http://localhost:3001/translate/", {
+      const token = localStorage.getItem("token"); // ✅ Token uthao
+      if (!token) return; // ✅ Agar token nahi toh request mat bhejo
+  
+      const response = await axios.post("http://localhost:3001/translate", {
         text: inputText,
         from,
         to,
       });
-      setLoading(false)
+  
+      setLoading(false);
       setTranslatedText(response.data.translatedText);
+  
+      // ✅ Automatically Save History After Translation
+      await axios.post(
+        "http://localhost:3001/history/save",
+        {
+          input: inputText,
+          translation: response.data.translatedText,
+          from,
+          to,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`, // ✅ Token add kiya
+          },
+        }
+      );
+  
     } catch (error) {
+      setLoading(false);
       console.error("Translation error:", error);
     }
   };
-
+  
+  
   const swapLanguages = () => {
     setFrom(to);
     setTo(from);
@@ -223,8 +249,8 @@ const Translator = () => {
               onClick={() => setText("")}
               className="absolute right-3 top-3 text-gray-500 hover:text-gray-700"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
               </svg>
             </button>
           )}
@@ -255,11 +281,63 @@ const Translator = () => {
           </div>
 
         </div>
-        <div className="">
-          hi
+        <div className="mt-12">
+        <button onClick={() => setIsHistoryOpen(true)} className="fixed bottom-4 right-4 bg-purple-800 text-white p-3 rounded-full shadow-lg">
+        <FaHistory size={24} />
+      </button>
+      <HistorySidebar isOpen={isHistoryOpen} setIsOpen={setIsHistoryOpen} history={history} />
         </div>
       </div>
-  );  
+  );      
 };
 
 export default Translator;
+
+
+
+
+const HistorySidebar = ({ isOpen, setIsOpen }) => {
+  const [history, setHistory] = useState([]);
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const token = localStorage.getItem("token"); // ✅ Token fetch karo
+        if (!token) return; // Agar token nahi hai toh request mat bhejo
+
+        const response = await axios.get("http://localhost:3001/history", {
+          headers: {
+            Authorization: `Bearer ${token}`, // ✅ Token add kiya header mein
+          },
+        });
+
+        setHistory(response.data); // ✅ History state update
+      } catch (error) {
+        console.error("Error fetching history:", error);
+      }
+    };
+
+    if (isOpen) fetchHistory();
+  }, [isOpen]);
+
+  return (
+    <div className={`fixed top-0 right-0 h-full w-80 bg-white shadow-lg transform transition-transform duration-300 p-4 ${isOpen ? "translate-x-0" : "translate-x-full"}`}>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold text-purple-800">History</h2>
+        <button className="text-gray-600" onClick={() => setIsOpen(false)}>✖</button>
+      </div>
+      {history.length === 0 ? (
+        <p className="text-gray-500">No history available</p>
+      ) : (
+        <ul>
+          {history.map((item, index) => (
+            <li key={index} className="p-2 border-b text-sm text-gray-700">
+              {item.input} ({item.from}) → {item.translation} ({item.to})
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
+
