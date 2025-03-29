@@ -14,7 +14,7 @@ exports.saveHistory = async (req, res) => {
     await historyEntry.save();
 
     res.json({ message: "History saved successfully" });
-  } catch (error) {
+  } catch (error) { 
     console.error("Error saving history:", error);
     res.status(500).json({ error: "Error saving history" });
   }
@@ -32,3 +32,25 @@ exports.FetchHistory = async (req, res) => {
         res.status(500).json({ error: "Failed to fetch history" });
     }
 }
+
+
+
+exports.deleteHistory = async (req, res) => {
+    try {
+      const { id } = req.params; // ✅ Frontend se ID aayegi
+      const userId = req.user.id; // ✅ Logged-in user ka ID
+  
+      const historyItem = await History.findOne({ _id: id, userId });
+      if (!historyItem) {
+        return res.status(404).json({ error: "History item not found" });
+      }
+  
+      await History.deleteOne({ _id: id });
+      res.json({ message: "History deleted successfully" });
+  
+    } catch (error) {
+      console.error("Error deleting history:", error);
+      res.status(500).json({ error: "Failed to delete history" });
+    }
+  };
+  
