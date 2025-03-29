@@ -48,7 +48,7 @@ const Translator = () => {
   const [text, setText] = useState("");
   const [translatedText, setTranslatedText] = useState("");
   const [from, setFrom] = useState("en");
-  const [to, setTo] = useState("en");
+  const [to, setTo] = useState("hi");
   const textareaRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -156,7 +156,7 @@ const Translator = () => {
       setLoading(false);
       setTranslatedText(response.data.translatedText);
   
-      // ✅ Check if user is logged in before saving history
+      // Check if user is logged in before saving history
       const token = localStorage.getItem("token");
       if (token) {
         await axios.post(
@@ -288,18 +288,18 @@ const Translator = () => {
         </div>
       </div>
   );      
-};
+  };
 
-export default Translator;
-
-
+  export default Translator;
 
 
 
-const HistorySidebar = ({ isOpen, setIsOpen }) => {
+
+
+  const HistorySidebar = ({ isOpen, setIsOpen }) => {
   const [history, setHistory] = useState([]);
 
-  // ✅ Function to fetch history
+  // Function to fetch history
   const fetchHistory = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -315,7 +315,7 @@ const HistorySidebar = ({ isOpen, setIsOpen }) => {
     }
   };
 
-  // ✅ Function to delete history item
+  //  Function to delete history item
   const deleteHistoryItem = async (id) => {
     try {
       const token = localStorage.getItem("token");
@@ -331,7 +331,7 @@ const HistorySidebar = ({ isOpen, setIsOpen }) => {
     }
   };
 
-  // ✅ Fetch history only when the sidebar opens
+  // Fetch history only when the sidebar opens
   useEffect(() => {
     if (isOpen) fetchHistory();
   }, [isOpen]);
@@ -341,6 +341,8 @@ const HistorySidebar = ({ isOpen, setIsOpen }) => {
       className={`fixed top-0 right-0 h-full w-80 bg-white shadow-lg transform transition-transform duration-300 p-4 ${
         isOpen ? "translate-x-0" : "translate-x-full"
       }`}
+      style={{ maxHeight: "100vh", overflowY: "auto" }} // ✅ Added scroll
+
     >
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold text-purple-800">History</h2>
@@ -368,5 +370,5 @@ const HistorySidebar = ({ isOpen, setIsOpen }) => {
       )}
     </div>
   );
-};
+  };
 
