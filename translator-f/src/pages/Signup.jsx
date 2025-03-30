@@ -11,13 +11,16 @@ const SignUp = () => {
 
   const navigate = useNavigate();
 
+  const backendURL = import.meta.env.VITE_BACKEND_URL;
+
+
   const handleSignUp = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
     try {
-      const response = await axios.post("http://localhost:3001/users/signup", {
+      const response = await axios.post("https://translator-3-w6hg.onrender.com/users/signup", {
         name,
         email,
         password,

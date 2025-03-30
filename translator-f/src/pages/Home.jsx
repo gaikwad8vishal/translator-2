@@ -5,6 +5,9 @@ import { Clipboard, ClipboardCheck } from "lucide-react";
 import { FaHistory } from "react-icons/fa";
 
 
+const backendURL = import.meta.env.VITE_BACKEND_URL;
+
+
 const languages = [
   { code: "auto", name: "Detect Language" },
   { code: "af", name: "Afrikaans" }, { code: "sq", name: "Albanian" }, { code: "am", name: "Amharic" },
@@ -55,7 +58,6 @@ const Translator = () => {
   const [height, setHeight] = useState("auto");
   const [detectedLanguage, setDetectedLanguage] = useState("en"); // Default English
   const [history, setHistory] = useState([]);
-  const [location, setLocation] = useState(null);
 
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
 
@@ -152,7 +154,7 @@ const Translator = () => {
   const translateText = async (inputText) => {
     setLoading(true);
     try {
-      const response = await axios.post("http://localhost:3001/translate/", {
+      const response = await axios.post("https://translator-3-w6hg.onrender.com/translate/", {
         text: inputText,
         from,
         to,
@@ -165,7 +167,7 @@ const Translator = () => {
       const token = localStorage.getItem("token");
       if (token) {
         await axios.post(
-          "http://localhost:3001/history/save",
+          `${backendURL}/history/save`,
           {
             input: inputText,
             translation: response.data.translatedText,
@@ -316,7 +318,7 @@ const Translator = () => {
       const token = localStorage.getItem("token");
       if (!token) return;
 
-      const response = await axios.get("http://localhost:3001/history/all", {
+      const response = await axios.get("https://translator-3-w6hg.onrender.com/history/all", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -332,9 +334,10 @@ const Translator = () => {
       const token = localStorage.getItem("token");
       if (!token) return;
 
-      await axios.delete(`http://localhost:3001/history/delete/${id}`, {
+      await axios.delete(`https://translator-3-w6hg.onrender.com/history/delete/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      
 
       setHistory((prev) => prev.filter((item) => item._id !== id));
     } catch (error) {
