@@ -154,7 +154,7 @@ const Translator = () => {
   const translateText = async (inputText) => {
     setLoading(true);
     try {
-      const response = await axios.post("https://translator-3-w6hg.onrender.com/translate/", {
+      const response = await axios.post("https://translator-4-8ytv.onrender.com/translate/", {
         text: inputText,
         from,
         to,
@@ -318,7 +318,7 @@ const Translator = () => {
       const token = localStorage.getItem("token");
       if (!token) return;
 
-      const response = await axios.get("https://translator-3-w6hg.onrender.com/history/all", {
+      const response = await axios.get("https://translator-4-8ytv.onrender.com/history/all", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -334,7 +334,7 @@ const Translator = () => {
       const token = localStorage.getItem("token");
       if (!token) return;
 
-      await axios.delete(`https://translator-3-w6hg.onrender.com/history/delete/${id}`, {
+      await axios.delete(`https://translator-4-8ytv.onrender.com/history/delete/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       

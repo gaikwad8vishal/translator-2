@@ -20,7 +20,7 @@ const SignUp = () => {
     setError("");
 
     try {
-      const response = await axios.post("https://translator-3-w6hg.onrender.com/users/signup", {
+      const response = await axios.post("https://translator-4-8ytv.onrender.com/users/signup", {
         name,
         email,
         password,
