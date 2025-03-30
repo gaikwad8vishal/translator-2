@@ -6,6 +6,7 @@
     "start": "node src/index.js"
   },
   "keywords": [],
+  "type": "commonjs",
   "author": "",
   "license": "ISC",
   "description": "",

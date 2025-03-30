@@ -5,12 +5,15 @@ const userRoutes = require("./routes/userRoutes");
 const cors = require("cors");
 const translationRoutes = require("./routes/translationRoutes")
 const historyRoutes = require("./routes/history"); // Import History Route
-
-
 dotenv.config();
+
+
 const app = express();
 app.use(express.json());
-app.use(cors({ origin: "http://localhost:5173" , credentials: true  })); 
+
+const backendURL = process.env.VITE_BACKEND_URL;
+
+app.use(cors({ origin: backendURL, credentials: true  })); 
 
 
 mongoose.connect(process.env.MONGO_URI, {
