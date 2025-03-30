@@ -1,10 +1,5 @@
 {
-    "redirects": [
-      {
-        "source": "/(.*)",
-        "destination": "/index.html",
-        "statusCode": 200
-      }
-    ]
-  }
-  
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
