@@ -2,7 +2,7 @@ import axios from "axios";
 import { ArrowLeftRight, Languages } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Clipboard, ClipboardCheck } from "lucide-react";
-import { FaHistory, FaTimes } from "react-icons/fa";
+import { FaHistory } from "react-icons/fa";
 
 
 const languages = [
@@ -48,15 +48,18 @@ const Translator = () => {
   const [text, setText] = useState("");
   const [translatedText, setTranslatedText] = useState("");
   const [from, setFrom] = useState("en");
-  const [to, setTo] = useState("hi");
+  const [to, setTo] = useState("en");
   const textareaRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [height, setHeight] = useState("auto");
   const [detectedLanguage, setDetectedLanguage] = useState("en"); // Default English
-  const [ isOpen, setIsOpen] = useState(false)
   const [history, setHistory] = useState([]);
+  const [location, setLocation] = useState(null);
+
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
+
+
 
 
   useEffect(() => {
@@ -107,6 +110,7 @@ const Translator = () => {
   }, []);
 
   
+  
   const handleCopy = () => {
     if (!translatedText) return;
     navigator.clipboard.writeText(translatedText);
@@ -140,9 +144,10 @@ const Translator = () => {
     const timer = setTimeout(() => {
       translateText(text);
     }, 500); // Auto-translate after 500ms debounce
-
+  
     return () => clearTimeout(timer);
-  }, [text, from, to]);
+  }, [text, from, to]); // Dependencies include `from` and `to` so that translation updates on swap
+  
 
   const translateText = async (inputText) => {
     setLoading(true);
@@ -153,7 +158,7 @@ const Translator = () => {
         to,
       });
   
-      setLoading(false);
+    setLoading(false);
       setTranslatedText(response.data.translatedText);
   
       // Check if user is logged in before saving history
@@ -179,14 +184,20 @@ const Translator = () => {
       console.error("Translation error:", error);
     }
   };
-  
-  
   const swapLanguages = () => {
     setFrom(to);
     setTo(from);
-    setText(translatedText);
-    setTranslatedText("");
+  
+    setText(translatedText); // ✅ Input box mai translated text daalo
+    setTranslatedText(""); // ✅ Clear previous translation
+  
+    setTimeout(() => {
+      translateText(translatedText); // ✅ Naya translation call karo
+    }, 100); 
   };
+  
+  
+  
   
 
   return (
