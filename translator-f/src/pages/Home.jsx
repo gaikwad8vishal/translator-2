@@ -153,24 +153,44 @@ const Translator = () => {
 
   const translateText = async (inputText) => {
     setLoading(true);
+  
+    const apiKey = process.env.GOOGLE_API_KEY; 
+  
     try {
-      const response = await axios.post("https://translator-4-8ytv.onrender.com/translate/", {
-        text: inputText,
-        from,
-        to,
-      });
+      const response = await fetch(
+        `https://translation.googleapis.com/language/translate/v2?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            q: inputText,
+            source: from,
+            target: to,
+            format: "text",
+          }),
+        }
+      );
   
-    setLoading(false);
-      setTranslatedText(response.data.translatedText);
+      const data = await response.json();
   
-      // Check if user is logged in before saving history
+      if (data.error) {
+        throw new Error(data.error.message);
+      }
+  
+      const translated = data.data.translations[0].translatedText;
+      setTranslatedText(translated);
+      setLoading(false);
+  
+      // Optional: Save history to backend (if logged in)
       const token = localStorage.getItem("token");
       if (token) {
         await axios.post(
-          `${backendURL}/history/save`,
+          "https://translator-4-8ytv.onrender.com/history/save",
           {
             input: inputText,
-            translation: response.data.translatedText,
+            translation: translated,
             from,
             to,
           },
@@ -182,10 +202,12 @@ const Translator = () => {
         );
       }
     } catch (error) {
-      setLoading(false);
       console.error("Translation error:", error);
+      setTranslatedText("Translation failed.");
+      setLoading(false);
     }
   };
+  
   const swapLanguages = () => {
     setFrom(to);
     setTo(from);
