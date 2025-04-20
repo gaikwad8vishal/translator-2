@@ -2,7 +2,6 @@ import { IoLanguageOutline } from "react-icons/io5";
 import { useAuth } from "../utils/api";
 import { FaUserCircle } from "react-icons/fa";
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 
 const Header = () => {
   const { user, logout } = useAuth();
@@ -20,10 +19,10 @@ const Header = () => {
   }, []);
 
   return (
-    <header className="fixed w-full bg-white shadow-md p-4 flex items-center justify-between">
+    <header className=" z-60 fixed w-full bg-white shadow-md p-4 flex items-center justify-between">
       <h1 className="text-2xl font-semibold text-purple-800">
         <a href="/" className="flex gap-2 items-center">
-          <IoLanguageOutline /> Translator
+          <IoLanguageOutline /> PolyglotPro
         </a>
       </h1>
       <div className="relative" ref={dropdownRef}>
