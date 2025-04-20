@@ -1,9 +1,9 @@
-
 import axios from "axios";
 import { ArrowLeftRight, Languages, Mic, MicOff, Volume2 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Clipboard, ClipboardCheck } from "lucide-react";
-import { FaHistory } from "react-icons/fa";
+import { FaHistory, FaCamera, FaUpload } from "react-icons/fa";
+import Tesseract from 'tesseract.js'; // For OCR
 
 const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
 
@@ -77,45 +77,43 @@ const languages = [
 const Translator = () => {
   const [text, setText] = useState("");
   const [translatedText, setTranslatedText] = useState("");
-  const [from, setFrom] = useState("en"); // Default to "en" for input language
-  const [to, setTo] = useState("hi"); // Default output language => "hi"
+  const [from, setFrom] = useState("en");
+  const [to, setTo] = useState("hi");
   const textareaRef = useRef(null);
-  const outputRef = useRef(null); // New ref for output div
+  const outputRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [inputHeight, setInputHeight] = useState("auto"); // Renamed for clarity
-  const [outputHeight, setOutputHeight] = useState("auto"); // New state for output
+  const [inputHeight, setInputHeight] = useState("auto");
+  const [outputHeight, setOutputHeight] = useState("auto");
   const [detectedLanguage, setDetectedLanguage] = useState("en");
   const [history, setHistory] = useState([]);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [locationError, setLocationError] = useState("");
   const [loginWarning, setLoginWarning] = useState("");
-  const [isListening, setIsListening] = useState(false); // Microphone state
-  const [speechError, setSpeechError] = useState(""); // Speech recognition/synthesis errors
-  const recognitionRef = useRef(null); // Reference to SpeechRecognition instance
-  const [isSpeakingInput, setIsSpeakingInput] = useState(false); // Speech synthesis state
-  const [isSpeakingOutput, setIsSpeakingOutput] = useState(false); // Speech synthesis state
-  const [availableVoices, setAvailableVoices] = useState([]); // Store available voices
+  const [isListening, setIsListening] = useState(false);
+  const [speechError, setSpeechError] = useState("");
+  const recognitionRef = useRef(null);
+  const [isSpeakingInput, setIsSpeakingInput] = useState(false);
+  const [isSpeakingOutput, setIsSpeakingOutput] = useState(false);
+  const [availableVoices, setAvailableVoices] = useState([]);
+  const [isUploadMenuOpen, setIsUploadMenuOpen] = useState(false);
 
-  // Calculate character count
   const getCharCount = (text) => text.length;
   const charCount = getCharCount(text);
   const maxChars = 5000;
 
-  // Load available voices asynchronously
   useEffect(() => {
     const updateVoices = () => {
       const voices = window.speechSynthesis.getVoices();
       setAvailableVoices(voices);
     };
-    updateVoices(); // Initial call
-    window.speechSynthesis.onvoiceschanged = updateVoices; // Update when voices load
+    updateVoices();
+    window.speechSynthesis.onvoiceschanged = updateVoices;
     return () => {
-      window.speechSynthesis.onvoiceschanged = null; // Cleanup
+      window.speechSynthesis.onvoiceschanged = null;
     };
   }, []);
 
-  // Adjust input textarea height
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -125,7 +123,6 @@ const Translator = () => {
     }
   }, [text]);
 
-  // Adjust output div height
   useEffect(() => {
     if (outputRef.current) {
       outputRef.current.style.height = "auto";
@@ -135,7 +132,6 @@ const Translator = () => {
     }
   }, [translatedText, loading]);
 
-  // Initialize SpeechRecognition
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
   const startSpeechRecognition = () => {
@@ -147,24 +143,22 @@ const Translator = () => {
 
     const recognition = new SpeechRecognition();
     recognitionRef.current = recognition;
-    recognition.lang = from === "auto" ? "en-US" : `${from}-${from.toUpperCase()}`; // e.g., "en-US"
-    recognition.interimResults = true; // Show interim results
-    recognition.continuous = true; // Continue listening until stopped
+    recognition.lang = from === "auto" ? "en-US" : `${from}-${from.toUpperCase()}`;
+    recognition.interimResults = true;
+    recognition.continuous = true;
 
     recognition.onresult = (event) => {
-      let interimTranscript = "";
       let finalTranscript = "";
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          finalTranscript += transcript;
-        } else {
-          interimTranscript += transcript;
+          finalTranscript += event.results[i][0].transcript;
         }
       }
 
-      setText((prev) => prev + finalTranscript); // Append final transcript
+      if (finalTranscript) {
+        setText((prev) => prev + finalTranscript);
+      }
     };
 
     recognition.onerror = (event) => {
@@ -193,7 +187,7 @@ const Translator = () => {
     };
 
     recognition.onend = () => {
-      setIsListening(false); // Stop listening when recognition ends
+      setIsListening(false);
     };
 
     recognition.start();
@@ -216,7 +210,6 @@ const Translator = () => {
     }
   };
 
-  // Speech Synthesis for reading text aloud
   const speakText = (textToSpeak, lang, isInput) => {
     if (!window.speechSynthesis) {
       setSpeechError("Speech synthesis is not supported in your browser.");
@@ -278,7 +271,6 @@ const Translator = () => {
 
   const getUserLanguage = (retries = 3) => {
     if (!navigator.geolocation) {
-      console.warn("Geolocation not supported");
       setLocationError("Geolocation is not supported by your browser.");
       setTimeout(() => setLocationError(""), 2000);
       setFallbackLanguage();
@@ -292,7 +284,6 @@ const Translator = () => {
           fetchLocationAndSetLanguage(latitude, longitude);
         },
         (error) => {
-          console.error(`Geolocation error (attempt ${attempt}):`, error.message);
           if (error.code === error.POSITION_UNAVAILABLE && attempt < retries) {
             setTimeout(() => attemptGeolocation(attempt + 1), 2000 * attempt);
             return;
@@ -369,7 +360,6 @@ const Translator = () => {
         return;
       } catch (error) {
         retries--;
-        console.error(`Error fetching location (attempt ${4 - retries}):`, error.message);
         if (retries === 0) {
           setLocationError("Failed to detect location. Using default language.");
           setTimeout(() => setLocationError(""), 5000);
@@ -431,7 +421,6 @@ const Translator = () => {
       }
       setLoading(false);
     } catch (error) {
-      console.error("Translation error:", error.message);
       setTranslatedText(`Error: ${error.response?.data?.error || error.message}`);
       setLoading(false);
     }
@@ -442,6 +431,52 @@ const Translator = () => {
     setTo(from);
     setText(translatedText);
     setTranslatedText("");
+  };
+
+  const handleCameraScan = () => {
+    alert("Camera scan functionality to be implemented.");
+    setIsUploadMenuOpen(false);
+  };
+
+  const handlePhotoUpload = async (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setLoading(true);
+      try {
+        // Use Tesseract.js for OCR
+        const result = await Tesseract.recognize(
+          file,
+          'eng', // Default to English, can be extended based on 'from' language
+          { logger: (m) => console.log(m) }
+        );
+        const extractedText = result.data.text;
+        setText(extractedText); // Paste extracted text into input box
+        textareaRef.current.focus();
+        textareaRef.current.select(); // Select all text in textarea
+        setIsUploadMenuOpen(false);
+      } catch (error) {
+        setSpeechError(`Error extracting text from image: ${error.message}`);
+        setTimeout(() => setSpeechError(""), 3000);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleDocumentUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const docData = e.target.result;
+        // Simple text extraction for supported formats
+        setText(docData);
+        textareaRef.current.focus();
+        textareaRef.current.select();
+        setIsUploadMenuOpen(false);
+      };
+      reader.readAsText(file);
+    }
   };
 
   useEffect(() => {
@@ -461,7 +496,7 @@ const Translator = () => {
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-gray-100 p-4">
+    <div className="flex flex-col mt-24 justify-center bg-gray-100 p-4">
       <div className="bg-white p-6 rounded-2xl mt-72 sm:mt-0 shadow-2xl w-full transition-all">
         <h1 className="text-3xl font-bold text-center mb-6 flex items-center justify-center gap-2">
           <Languages className="text-purple-700" />
@@ -516,13 +551,12 @@ const Translator = () => {
           </select>
         </div>
         <div className="flex gap-6 grid grid-cols-1 sm:grid-cols-2">
-          {/* Input Textarea (Left) */}
           <div className="relative p-4 border rounded-lg min-h-40">
-            <div className="flex justify-between  mb-2">
-            <button onClick={toggleMicrophone} className={`text-gray-500 hover:text-gray-700 ${isListening ? "text-red-500" : ""}`}>
+            <div className="flex justify-between mb-2">
+              <button onClick={toggleMicrophone} className={`text-gray-500 hover:text-gray-700 ${isListening ? "text-red-500" : ""}`}>
                 {isListening ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
               </button>
-              <div className="flex gap-4 ">
+              <div className="flex gap-4">
                 {text && (
                   <button onClick={() => setText("")} className="text-gray-500 hover:text-gray-700">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-6 h-6">
@@ -533,14 +567,31 @@ const Translator = () => {
                 <button onClick={toggleSpeakInput} className={`text-gray-500 hover:text-gray-700 ${isSpeakingInput ? "text-blue-500" : ""}`}>
                   <Volume2 className="w-6 h-6" />
                 </button>
+                <button onClick={() => setIsUploadMenuOpen(!isUploadMenuOpen)} className="text-gray-500 hover:text-gray-700">
+                  <FaCamera className="w-6 h-6" />
+                </button>
               </div>
-              
             </div>
+            {isUploadMenuOpen && (
+              <div className="absolute bottom-12 left-4 bg-white border rounded-lg shadow-lg p-2 z-10">
+                <button onClick={handleCameraScan} className="flex items-center gap-2 p-2 hover:bg-gray-100 w-full text-left">
+                  <FaCamera className="w-4 h-4" /> Camera
+                </button>
+                <label className="flex items-center gap-2 p-2 hover:bg-gray-100 w-full text-left cursor-pointer">
+                  <FaUpload className="w-4 h-4" /> Photo
+                  <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+                </label>
+                <label className="flex items-center gap-2 p-2 hover:bg-gray-100 w-full text-left cursor-pointer">
+                  <FaUpload className="w-4 h-4" /> Document
+                  <input type="file" accept=".pdf,.doc,.docx,.txt" onChange={handleDocumentUpload} className="hidden" />
+                </label>
+              </div>
+            )}
             <textarea
               ref={textareaRef}
               value={text}
               onChange={(e) => setText(e.target.value)}
-              className="w-full min-h-32 rounded-lg resize-none focus:outline-none "
+              className="w-full min-h-32 rounded-lg resize-none focus:outline-none"
               placeholder="Enter text or use the microphone..."
               style={{ height: inputHeight, overflowWrap: "break-word", whiteSpace: "pre-wrap" }}
             />
@@ -548,9 +599,7 @@ const Translator = () => {
               {charCount}/{maxChars}
             </div>
           </div>
-          {/* Translated Text Div (Right) */}
           <div className="relative p-4 border rounded-lg min-h-40 bg-gray-100">
-            {/* Top-right icons */}
             <div className="absolute top-4 right-2 flex gap-2 z-10">
               <button onClick={handleCopy} className="text-gray-500 hover:text-black">
                 {copied ? (
@@ -566,8 +615,6 @@ const Translator = () => {
                 <Volume2 className="w-5 h-5" />
               </button>
             </div>
-
-            {/* Output text */}
             <div
               ref={outputRef}
               className="w-full mt-6 text-gray-800"
@@ -588,8 +635,6 @@ const Translator = () => {
               )}
             </div>
           </div>
-
-
         </div>
       </div>
       <div className="mt-12">
@@ -610,7 +655,6 @@ const Translator = () => {
   );
 };
 
-// History Sidebar
 const HistorySidebar = ({ isOpen, setIsOpen, history, setHistory }) => {
   const fetchHistory = async () => {
     try {
@@ -640,7 +684,7 @@ const HistorySidebar = ({ isOpen, setIsOpen, history, setHistory }) => {
 
   return (
     <div
-      className={`fixed top-0 right-0 h-full w-80 bg-white shadow-lg transform transition-transform duration-300 p-4 ${isOpen ? "translate-x-0" : "translate-x-full"}`}
+      className={`fixed top-0 z-50 right-0 h-full w-80 bg-white shadow-lg transform transition-transform duration-300 p-4 ${isOpen ? "translate-x-0" : "translate-x-full"}`}
       style={{ maxHeight: "100vh", overflowY: "auto" }}
     >
       <div className="flex justify-between items-center mb-4">
