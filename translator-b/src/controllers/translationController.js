@@ -9,10 +9,9 @@ exports.translateText = async (req, res) => {
 
     try {
         const response = await axios.get(
-            `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${from}|${to}&de=your@email.com`
+            `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${from}|${to}&de=as@email.com`
         );
 
-        // ✅ Agar cache se aaya toh alternate API response bhi check karega
         let translatedText = response.data.responseData.translatedText;
         if (response.data.matches && response.data.matches.length > 0) {
             translatedText = response.data.matches[0].translation;
@@ -20,7 +19,11 @@ exports.translateText = async (req, res) => {
 
         res.json({ translatedText });
     } catch (error) {
-        res.status(500).json({ error: "Translation failed" });
+        const errorMessage = error.response?.data?.error || error.response?.statusText || "Translation failed";
+        if (error.response?.status === 429) {
+            return res.status(429).json({ error: "Too Many Requests: Daily limit exceeded. Try again tomorrow or use a new email/key." });
+        }
+        res.status(500).json({ error: errorMessage });
     }
 };
 
