@@ -12,45 +12,19 @@ const supportedTesseractLangs = ["eng"];
 
 // Available languages for translation
 const languages = [
-  { code: "auto", name: "Detect Language" },
-  // { code: "af", name: "Afrikaans" },
-  // { code: "sq", name: "Albanian" },
-  // { code: "am", name: "Amharic" },
-  // { code: "ar", name: "Arabic" },
   { code: "as", name: "Assamese" },
-  // { code: "az", name: "Azerbaijani" },
   { code: "bn", name: "Bengali" },
-  // { code: "bs", name: "Bosnian" },
-  { code: "ur", name: "Urdu" },
-  // { code: "bg", name: "Bulgarian" },
-  // { code: "zh", name: "Chinese" },
-  // { code: "hr", name: "Croatian" },
-  // { code: "cs", name: "Czech" },
-  // { code: "da", name: "Danish" },
-  // { code: "eu", name: "Basque" },
-  // { code: "nl", name: "Dutch" },
+  { code: "brx", name: "Bodo" },
   { code: "en", name: "English" },
-  // { code: "et", name: "Estonian" },
-  // { code: "fi", name: "Finnish" },
-  // { code: "fr", name: "French" },
-  // { code: "de", name: "German" },
-  // { code: "el", name: "Greek" },
+  { code: "gbm", name: "Garhwali" },
   { code: "gu", name: "Gujarati" },
-  // { code: "he", name: "Hebrew" },
   { code: "hi", name: "Hindi" },
-  // { code: "hu", name: "Hungarian" },
-  // { code: "is", name: "Icelandic" },
-  // { code: "id", name: "Indonesian" },
-  // { code: "it", name: "Italian" },
-  // { code: "ja", name: "Japanese" },
   { code: "kn", name: "Kannada" },
-  // { code: "ko", name: "Korean" },
-  // { code: "lv", name: "Latvian" },
-  // { code: "lt", name: "Lithuanian" },
+  { code: "kfy", name: "Kumaoni" },
   { code: "mai", name: "Maithili" },
   { code: "ml", name: "Malayalam" },
-  // { code: "ms", name: "Malay" },
   { code: "mr", name: "Marathi" },
+  { code: "mtei", name: "Meitei" },
   { code: "ne", name: "Nepali" },
   { code: "or", name: "Odia" },
   { code: "pa", name: "Punjabi" },
@@ -58,24 +32,8 @@ const languages = [
   { code: "si", name: "Sinhala" },
   { code: "ta", name: "Tamil" },
   { code: "te", name: "Telugu" },
-  { code: "mtei", name: "Meitei" },
   { code: "tcy", name: "Tulu" },
-  { code: "brx", name: "Bodo" },
-  { code: "gbm", name: "Garhwali" },
-  { code: "kfy", name: "Kumaoni" },
-  // { code: "ps", name: "Pashto" },
-  // { code: "bo", name: "Tibetan" },
-  // { code: "mn", name: "Mongolian" },
-  // { code: "lo", name: "Lao" },
-  // { code: "sw", name: "Swahili" },
-  // { code: "zu", name: "Zulu" },
-  // { code: "ha", name: "Hausa" },
-  // { code: "ga", name: "Irish" },
-  // { code: "cy", name: "Welsh" },
-  // { code: "hy", name: "Armenian" },
-  // { code: "ka", name: "Georgian" },
-  // { code: "ug", name: "Uyghur" },
-  // { code: "yi", name: "Yiddish" },
+  { code: "ur", name: "Urdu" },
 ];
 
 const Translator = () => {
@@ -83,6 +41,10 @@ const Translator = () => {
   const [translatedText, setTranslatedText] = useState("");
   const [from, setFrom] = useState("en");
   const [to, setTo] = useState("hi");
+  const [searchFrom, setSearchFrom] = useState(""); // Search term for 'from' selector
+  const [searchTo, setSearchTo] = useState("");   // Search term for 'to' selector
+  const [isFromOpen, setIsFromOpen] = useState(false); // Toggle for 'from' dropdown
+  const [isToOpen, setIsToOpen] = useState(false);     // Toggle for 'to' dropdown
   const textareaRef = useRef(null);
   const outputRef = useRef(null);
   const [loading, setLoading] = useState(false);
@@ -105,6 +67,14 @@ const Translator = () => {
   const getCharCount = (text) => text.length;
   const charCount = getCharCount(text);
   const maxChars = 5000;
+
+  // Filter languages based on search term
+  const filteredFromLanguages = languages.filter((lang) =>
+    lang.name.toLowerCase().includes(searchFrom.toLowerCase())
+  );
+  const filteredToLanguages = languages.filter((lang) =>
+    lang.name.toLowerCase().includes(searchTo.toLowerCase())
+  );
 
   useEffect(() => {
     const updateVoices = () => {
@@ -307,7 +277,6 @@ const Translator = () => {
           }
           setLocationError(errorMessage);
           setTimeout(() => setLocationError(""), 5000);
-
           setFallbackLanguage();
         },
         { timeout: 30000, maximumAge: 300000, enableHighAccuracy: false }
@@ -549,7 +518,109 @@ const Translator = () => {
 
   return (
     <div className="flex flex-col mt-24 justify-center p-4">
-      <div className="card p-6 bg-white rounded-2xl  sm:mt-0 shadow-2xl w-full transition-all">
+      {/* Search Panel with Dropdown-integrated Search */}
+      <div className="card p-4 bg-white rounded-2xl shadow-2xl mb-6">
+        <div className="flex flex-col sm:flex-row justify-between gap-4">
+          <div className="relative w-full sm:w-1/3" onClick={() => setIsFromOpen(!isFromOpen)}>
+            <button
+              onClick={() => setIsFromOpen(!isFromOpen)}
+              className="w-full border p-3 rounded-lg flex justify-between items-center"
+            >
+              {languages.find((lang) => lang.code === from)?.name || "Select Language"}
+              <svg
+                className="w-4 h-4 ml-2 transition-transform duration-200"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+                style={{ transform: isFromOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {isFromOpen && (
+              <div className="absolute z-10 w-full bg-white border rounded-lg shadow-lg mt-1">
+                <input
+                  type="text"
+                  value={searchFrom}
+                  onChange={(e) => setSearchFrom(e.target.value)}
+                  placeholder="Search languages..."
+                  className="w-full p-2 border-b rounded-t-lg focus:outline-none"
+                  autoFocus
+                />
+                <div className="max-h-40 overflow-y-auto">
+                  {filteredFromLanguages.sort((a, b) => a.name.localeCompare(b.name)).map((lang) => (
+                    <div
+                      key={lang.code}
+                      onClick={() => {
+                        setFrom(lang.code);
+                        setSearchFrom("");
+                        setIsFromOpen(false);
+                      }}
+                      className="p-2 hover:bg-gray-100 cursor-pointer"
+                    >
+                      {lang.name}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <button
+            onClick={swapLanguages}
+            className="p-3 rounded-full hover:bg-gray-200 transition self-center sm:self-auto text-gray-600"
+          >
+            <ArrowLeftRight />
+          </button>
+          <div className="relative w-full sm:w-1/3">
+            <button
+              onClick={() => setIsToOpen(!isToOpen)}
+              className="w-full border p-3 rounded-lg flex justify-between items-center"
+            >
+              {languages.find((lang) => lang.code === to)?.name || "Select Language"}
+              <svg
+                className="w-4 h-4 ml-2 transition-transform duration-200"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+                style={{ transform: isToOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {isToOpen && (
+              <div className="absolute z-20 w-full bg-white border rounded-lg shadow-lg mt-1" style={{ top: '100%' }}>
+                <input
+                  type="text"
+                  value={searchTo}
+                  onChange={(e) => setSearchTo(e.target.value)}
+                  placeholder="Search languages..."
+                  className="w-full p-2 border-b rounded-t-lg focus:outline-none"
+                  autoFocus
+                />
+                <div className="max-h-40 overflow-y-auto">
+                  {filteredToLanguages.sort((a, b) => a.name.localeCompare(b.name)).map((lang) => (
+                    <div
+                      key={lang.code}
+                      onClick={() => {
+                        setTo(lang.code);
+                        setSearchTo("");
+                        setIsToOpen(false);
+                      }}
+                      className="p-2 hover:bg-gray-100 cursor-pointer"
+                    >
+                      {lang.name}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="card p-6 bg-white rounded-2xl sm:mt-0 shadow-2xl w-full transition-all">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Languages className="text-purple-700" />
@@ -589,21 +660,6 @@ const Translator = () => {
             </button>
           </div>
         )}
-        <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
-          <select value={from} onChange={(e) => setFrom(e.target.value)} className="border p-3 rounded-lg w-full sm:w-1/3">
-            {languages.sort((a, b) => a.name.localeCompare(b.name)).map((lang) => (
-              <option key={lang.code} value={lang.code}>{lang.name}</option>
-            ))}
-          </select>
-          <button onClick={swapLanguages} className="p-3 rounded-full hover:bg-gray-200 transition self-center sm:self-auto text-gray-600">
-            <ArrowLeftRight />
-          </button>
-          <select value={to} onChange={(e) => setTo(e.target.value)} className="border p-3 rounded-lg w-full sm:w-1/3">
-            {languages.sort((a, b) => a.name.localeCompare(b.name)).map((lang) => (
-              <option key={lang.code} value={lang.code}>{lang.name}</option>
-            ))}
-          </select>
-        </div>
         <div className="flex gap-6 grid grid-cols-1 sm:grid-cols-2">
           <div className="p-4 border rounded-lg min-h-40">
             <div className="flex justify-between mb-2">
@@ -654,7 +710,7 @@ const Translator = () => {
             </div>
           </div>
           <div className="card relative p-4 border rounded-lg min-h-40">
-            <div className="absolute top-4 right-2 flex gap-2 z-10">
+            <div className={`absolute top-4 right-2 flex gap-2 ${isToOpen ? 'hidden' : 'z-10'}`}>
               <button onClick={handleCopy} className="text-gray-500 hover:text-black">
                 {copied ? (
                   <HiClipboardCheck className="w-5 h-5 text-green-500" />
