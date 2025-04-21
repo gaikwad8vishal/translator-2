@@ -1,0 +1,46 @@
+/* src/index.css or src/App.css */
+:root {
+    --background-color: #f7f7f7;
+    --text-color: #000;
+    --card-background: #fff;
+    --border-color: #e5e7eb;
+    --primary-color: #9333ea;
+    --secondary-color: #6b21a8;
+  }
+  
+  .dark-mode {
+    --background-color: #1f2937;
+    --text-color: #fff;
+    --card-background: #2d3748;
+    --border-color: #4a5568;
+    --primary-color: #a78bfa;
+    --secondary-color: #8b5cf6;
+  }
+  
+  body {
+    background-color: var(--background-color);
+    color: var(--text-color);
+    transition: all 0.3s ease;
+  }
+  
+  header, .card, select, textarea, .sidebar {
+    background-color: var(--card-background);
+    color: var(--text-color);
+    border-color: var(--border-color);
+  }
+  
+  button, .icon {
+    color: var(--primary-color);
+  }
+  
+  button:hover {
+    color: var(--secondary-color);
+  }
+  
+  .dark-mode button, .dark-mode .icon {
+    color: var(--primary-color);
+  }
+  
+  .dark-mode button:hover {
+    color: var(--secondary-color);
+  }

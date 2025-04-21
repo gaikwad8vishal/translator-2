@@ -1,12 +1,16 @@
 import axios from "axios";
 import { ArrowLeftRight, Languages, Mic, MicOff, Volume2 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { Clipboard, ClipboardCheck } from "lucide-react";
-import { FaHistory, FaCamera, FaUpload } from "react-icons/fa";
-import Tesseract from 'tesseract.js'; // For OCR
+import { HiClipboard, HiClipboardCheck } from "react-icons/hi";
+import { FaHistory, FaCamera, FaUpload, FaPaperclip } from "react-icons/fa";
+import Tesseract from "tesseract.js";
 
 const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
 
+// Supported Tesseract languages
+const supportedTesseractLangs = ["eng"];
+
+// Available languages for translation
 const languages = [
   { code: "auto", name: "Detect Language" },
   { code: "af", name: "Afrikaans" },
@@ -149,13 +153,11 @@ const Translator = () => {
 
     recognition.onresult = (event) => {
       let finalTranscript = "";
-
       for (let i = event.resultIndex; i < event.results.length; i++) {
         if (event.results[i].isFinal) {
           finalTranscript += event.results[i][0].transcript;
         }
       }
-
       if (finalTranscript) {
         setText((prev) => prev + finalTranscript);
       }
@@ -245,7 +247,7 @@ const Translator = () => {
     const matchingVoice = availableVoices.find((voice) => voice.lang === speechLang);
     if (matchingVoice) utterance.voice = matchingVoice;
     else {
-      setSpeechError(`No voice available for ${lang} on this device. Try installing a ${lang} language pack or using a supported language like Hindi.`);
+      setSpeechError(`No voice available for ${lang}. Try installing a ${lang} language pack.`);
       setTimeout(() => setSpeechError(""), 5000);
     }
 
@@ -304,7 +306,8 @@ const Translator = () => {
               break;
           }
           setLocationError(errorMessage);
-          setTimeout(() => setLocationError(""), 2000);
+          setTimeout(() => setLocationError(""), 5000);
+
           setFallbackLanguage();
         },
         { timeout: 30000, maximumAge: 300000, enableHighAccuracy: false }
@@ -405,7 +408,13 @@ const Translator = () => {
         { headers: { "Content-Type": "application/json" } }
       );
       const translated = response.data.translatedText;
-      setTranslatedText(translated);
+      if (translated.startsWith("Error:")) {
+        setSpeechError(translated.replace("Error: ", ""));
+        setTimeout(() => setSpeechError(""), 3000);
+        setTranslatedText("");
+      } else {
+        setTranslatedText(translated);
+      }
       const token = localStorage.getItem("token");
       if (token) {
         try {
@@ -419,9 +428,9 @@ const Translator = () => {
           console.error("Failed to save history:", historyError.message);
         }
       }
-      setLoading(false);
     } catch (error) {
       setTranslatedText(`Error: ${error.response?.data?.error || error.message}`);
+    } finally {
       setLoading(false);
     }
   };
@@ -431,6 +440,9 @@ const Translator = () => {
     setTo(from);
     setText(translatedText);
     setTranslatedText("");
+    if (translatedText) {
+      translateText(translatedText);
+    }
   };
 
   const handleCameraScan = () => {
@@ -438,45 +450,85 @@ const Translator = () => {
     setIsUploadMenuOpen(false);
   };
 
+  const initializeTesseractWorker = async () => {
+    console.log("Initializing Tesseract worker for English");
+    const worker = await Tesseract.createWorker({
+      workerPath: "https://unpkg.com/tesseract.js@v5.1.0/dist/worker.min.js",
+      corePath: "https://unpkg.com/tesseract.js-core@v5.1.0/tesseract-core.wasm.js",
+      langPath: "https://tessdata.projectnaptha.com/4.0.0/",
+      logger: (m) => console.log(m),
+    });
+
+    await worker.loadLanguage("eng");
+    await worker.initialize("eng");
+
+    console.log("Tesseract worker initialized successfully for English");
+    return worker;
+  };
+
   const handlePhotoUpload = async (event) => {
     const file = event.target.files[0];
-    if (file) {
-      setLoading(true);
-      try {
-        // Use Tesseract.js for OCR
-        const result = await Tesseract.recognize(
-          file,
-          'eng', // Default to English, can be extended based on 'from' language
-          { logger: (m) => console.log(m) }
-        );
-        const extractedText = result.data.text;
-        setText(extractedText); // Paste extracted text into input box
-        textareaRef.current.focus();
-        textareaRef.current.select(); // Select all text in textarea
+    if (!file) return;
+
+    setLoading(true);
+    setSpeechError("");
+
+    try {
+      console.log("Processing photo upload...");
+      const worker = await initializeTesseractWorker();
+      const {
+        data: { text },
+      } = await worker.recognize(file);
+
+      const extractedText = text.trim();
+      await worker.terminate();
+
+      if (extractedText) {
+        setText(extractedText);
+        textareaRef.current?.focus();
+        textareaRef.current?.select();
         setIsUploadMenuOpen(false);
-      } catch (error) {
-        setSpeechError(`Error extracting text from image: ${error.message}`);
+      } else {
+        setSpeechError("No text detected in the image.");
         setTimeout(() => setSpeechError(""), 3000);
-      } finally {
-        setLoading(false);
       }
+    } catch (error) {
+      console.error("OCR Error:", error);
+      setSpeechError(`Error extracting text from photo: ${error.message}`);
+      setTimeout(() => setSpeechError(""), 3000);
+    } finally {
+      setLoading(false);
+      setIsUploadMenuOpen(false);
     }
   };
 
   const handleDocumentUpload = (event) => {
     const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const docData = e.target.result;
-        // Simple text extraction for supported formats
-        setText(docData);
-        textareaRef.current.focus();
-        textareaRef.current.select();
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      const docData = e.target.result;
+      const cleanedText = docData.trim();
+
+      if (cleanedText) {
+        setText(cleanedText);
+        textareaRef.current?.focus();
+        textareaRef.current?.select();
         setIsUploadMenuOpen(false);
-      };
-      reader.readAsText(file);
-    }
+      } else {
+        setSpeechError("No text found in the document.");
+        setTimeout(() => setSpeechError(""), 3000);
+      }
+    };
+
+    reader.onerror = () => {
+      setSpeechError("Error reading the document file.");
+      setTimeout(() => setSpeechError(""), 3000);
+    };
+
+    reader.readAsText(file);
   };
 
   useEffect(() => {
@@ -496,17 +548,19 @@ const Translator = () => {
   }, []);
 
   return (
-    <div className="flex flex-col mt-24 justify-center bg-gray-100 p-4">
-      <div className="bg-white p-6 rounded-2xl mt-72 sm:mt-0 shadow-2xl w-full transition-all">
-        <h1 className="text-3xl font-bold text-center mb-6 flex items-center justify-center gap-2">
-          <Languages className="text-purple-700" />
-          <div className="text-purple-700">PolyglotPro</div>
-        </h1>
+    <div className="flex flex-col mt-24 justify-center p-4">
+      <div className="card p-6 bg-white rounded-2xl  sm:mt-0 shadow-2xl w-full transition-all">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <Languages className="text-purple-700" />
+            <div>PolyglotPro</div>
+          </h1>
+        </div>
         {locationError && (
-          <div className="text-red-500 text-center mb-4 bg-red-100 p-3 rounded-lg flex justify-between items-center">
+          <div className="text-red-500 text-center mb-4 p-3 preheated-lg flex justify-between items-center">
             <p>{locationError} {locationError.includes("unavailable") && "This may be due to a weak signal."}</p>
             <div className="flex gap-2">
-              <button onClick={() => getUserLanguage()} className="text-blue-700 hover:text-blue-900 underline">Try Again</button>
+              <button onClick={() => getUserLanguage()} className="text-blue-700 hover:text-blue-900">Try Again</button>
               <button onClick={() => setLocationError("")} className="text-red-700 hover:text-red-900">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -516,7 +570,7 @@ const Translator = () => {
           </div>
         )}
         {loginWarning && (
-          <div className="text-red-500 text-center mb-4 bg-red-100 p-3 rounded-lg flex justify-between items-center">
+          <div className="text-red-500 text-center mb-4 p-3 rounded-lg flex justify-between items-center">
             <p>{loginWarning}</p>
             <button onClick={() => setLoginWarning("")} className="text-red-700 hover:text-red-900">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-5">
@@ -526,7 +580,7 @@ const Translator = () => {
           </div>
         )}
         {speechError && (
-          <div className="text-red-500 text-center mb-4 bg-red-100 p-3 rounded-lg flex justify-between items-center">
+          <div className="text-red-500 text-center mb-4 p-3 rounded-lg flex justify-between items-center">
             <p>{speechError}</p>
             <button onClick={() => setSpeechError("")} className="text-red-700 hover:text-red-900">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-5">
@@ -536,24 +590,24 @@ const Translator = () => {
           </div>
         )}
         <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
-          <select value={from} onChange={(e) => setFrom(e.target.value)} className="border p-3 rounded-lg w-full sm:w-1/3 text-gray-700">
+          <select value={from} onChange={(e) => setFrom(e.target.value)} className="border p-3 rounded-lg w-full sm:w-1/3">
             {languages.sort((a, b) => a.name.localeCompare(b.name)).map((lang) => (
               <option key={lang.code} value={lang.code}>{lang.name}</option>
             ))}
           </select>
-          <button onClick={swapLanguages} className="p-3 rounded-full hover:bg-gray-200 transition self-center sm:self-auto">
-            <ArrowLeftRight className="text-gray-600" />
+          <button onClick={swapLanguages} className="p-3 rounded-full hover:bg-gray-200 transition self-center sm:self-auto text-gray-600">
+            <ArrowLeftRight />
           </button>
-          <select value={to} onChange={(e) => setTo(e.target.value)} className="border p-3 rounded-lg w-full sm:w-1/3 text-gray-700">
+          <select value={to} onChange={(e) => setTo(e.target.value)} className="border p-3 rounded-lg w-full sm:w-1/3">
             {languages.sort((a, b) => a.name.localeCompare(b.name)).map((lang) => (
               <option key={lang.code} value={lang.code}>{lang.name}</option>
             ))}
           </select>
         </div>
         <div className="flex gap-6 grid grid-cols-1 sm:grid-cols-2">
-          <div className="relative p-4 border rounded-lg min-h-40">
+          <div className="p-4 border rounded-lg min-h-40">
             <div className="flex justify-between mb-2">
-              <button onClick={toggleMicrophone} className={`text-gray-500 hover:text-gray-700 ${isListening ? "text-red-500" : ""}`}>
+              <button onClick={toggleMicrophone} className="text-gray-500 hover:text-gray-700">
                 {isListening ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
               </button>
               <div className="flex gap-4">
@@ -564,22 +618,22 @@ const Translator = () => {
                     </svg>
                   </button>
                 )}
-                <button onClick={toggleSpeakInput} className={`text-gray-500 hover:text-gray-700 ${isSpeakingInput ? "text-blue-500" : ""}`}>
+                <button onClick={toggleSpeakInput} className="text-gray-500 hover:text-gray-700">
                   <Volume2 className="w-6 h-6" />
                 </button>
                 <button onClick={() => setIsUploadMenuOpen(!isUploadMenuOpen)} className="text-gray-500 hover:text-gray-700">
-                  <FaCamera className="w-6 h-6" />
+                  <FaPaperclip className="w-6 h-6" />
                 </button>
               </div>
             </div>
             {isUploadMenuOpen && (
-              <div className="absolute bottom-12 left-4 bg-white border rounded-lg shadow-lg p-2 z-10">
+              <div className="absolute z-10 left-[200px] md:bottom-[160px] md:left-[450px] bg-white border rounded-lg shadow-lg p-2">
                 <button onClick={handleCameraScan} className="flex items-center gap-2 p-2 hover:bg-gray-100 w-full text-left">
                   <FaCamera className="w-4 h-4" /> Camera
                 </button>
                 <label className="flex items-center gap-2 p-2 hover:bg-gray-100 w-full text-left cursor-pointer">
                   <FaUpload className="w-4 h-4" /> Photo
-                  <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+                  <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" disabled={loading} />
                 </label>
                 <label className="flex items-center gap-2 p-2 hover:bg-gray-100 w-full text-left cursor-pointer">
                   <FaUpload className="w-4 h-4" /> Document
@@ -595,29 +649,26 @@ const Translator = () => {
               placeholder="Enter text or use the microphone..."
               style={{ height: inputHeight, overflowWrap: "break-word", whiteSpace: "pre-wrap" }}
             />
-            <div className="mt-2 text-sm text-gray-500 text-right">
+            <div className="mt-2 text-sm text-right">
               {charCount}/{maxChars}
             </div>
           </div>
-          <div className="relative p-4 border rounded-lg min-h-40 bg-gray-100">
+          <div className="card relative p-4 border rounded-lg min-h-40">
             <div className="absolute top-4 right-2 flex gap-2 z-10">
               <button onClick={handleCopy} className="text-gray-500 hover:text-black">
                 {copied ? (
-                  <ClipboardCheck className="w-5 h-5 text-green-500" />
+                  <HiClipboardCheck className="w-5 h-5 text-green-500" />
                 ) : (
-                  <Clipboard className="w-5 h-5" />
+                  <HiClipboard className="w-5 h-5" />
                 )}
               </button>
-              <button
-                onClick={toggleSpeakOutput}
-                className={`text-gray-500 hover:text-gray-700 ${isSpeakingOutput ? "text-blue-500" : ""}`}
-              >
+              <button onClick={toggleSpeakOutput} className="text-gray-500 hover:text-gray-700">
                 <Volume2 className="w-5 h-5" />
               </button>
             </div>
             <div
               ref={outputRef}
-              className="w-full mt-6 text-gray-800"
+              className="w-full mt-6"
               style={{ height: outputHeight, overflowWrap: "break-word", whiteSpace: "pre-wrap" }}
             >
               {loading ? (
@@ -640,7 +691,7 @@ const Translator = () => {
       <div className="mt-12">
         <button
           onClick={handleHistoryClick}
-          className="fixed bottom-4 right-4 bg-purple-800 text-white p-3 rounded-full shadow-lg"
+          className="fixed bottom-4 right-4 p-3 rounded-full shadow-lg bg-purple-800 text-white"
         >
           <FaHistory size={24} />
         </button>
@@ -700,7 +751,7 @@ const HistorySidebar = ({ isOpen, setIsOpen, history, setHistory }) => {
       ) : (
         <ul>
           {history.map((item) => (
-            <li key={item._id} className="p-2 border-b text-sm text-gray-700 flex justify-between">
+            <li key={item._id} className="p-2 border-b border-gray-200 text-gray-700 flex justify-between">
               <span>{item.input} ({item.from}) → {item.translation} ({item.to})</span>
               <button onClick={() => deleteHistoryItem(item._id)} className="text-gray-800 text-xs">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6">

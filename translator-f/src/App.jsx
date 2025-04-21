@@ -5,11 +5,13 @@ import SignUp from "./pages/Signup";
 import { AuthProvider } from "./utils/api";
 import Translator from "./pages/Home";
 import AuthWatcher from "./components/authwatcher";
+import { ThemeProvider } from "./components/Therechanger";
  // ✅ Import yaha karo
 
 function App() {
   return (
-    <AuthProvider>
+    <ThemeProvider>    
+      <AuthProvider>
       <Router> {/* ✅ Router ke andar rakho */}
         <AuthWatcher /> 
         <div className="flex flex-col min-h-screen">
@@ -24,6 +26,8 @@ function App() {
         </div>
       </Router>
     </AuthProvider>
+    </ThemeProvider>
+
   );
 }
 
