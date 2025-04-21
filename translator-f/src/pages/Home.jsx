@@ -5,7 +5,7 @@ import { HiClipboard, HiClipboardCheck } from "react-icons/hi";
 import { FaHistory, FaCamera, FaUpload, FaPaperclip } from "react-icons/fa";
 import Tesseract from "tesseract.js";
 
-const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
+const backendURL = import.meta.env.VITE_BACKEND_URL || "https://translator-5-6fr1.onrender.com";
 
 // Supported Tesseract languages
 const supportedTesseractLangs = ["eng"];
