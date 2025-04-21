@@ -1,32 +1,41 @@
 const axios = require("axios");
 
 exports.translateText = async (req, res) => {
-    const { text, from, to } = req.body;
+  const { text, from, to } = req.body;
 
-    if (!text || !from || !to) {
-        return res.status(400).json({ error: "Missing parameters" });
+  if (!text || !from || !to) {
+    return res.status(400).json({ error: "Missing parameters" });
+  }
+
+  try {
+    const response = await axios.get(
+      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(
+        text
+      )}&langpair=${from}|${to}&de=your@email.com`
+    );
+
+    let translatedText = response.data.responseData.translatedText;
+    if (response.data.matches && response.data.matches.length > 0) {
+      translatedText = response.data.matches[0].translation;
     }
 
-    try {
-        const response = await axios.get(
-            `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${from}|${to}&de=as@email.com`
-        );
-
-        let translatedText = response.data.responseData.translatedText;
-        if (response.data.matches && response.data.matches.length > 0) {
-            translatedText = response.data.matches[0].translation;
-        }
-
-        res.json({ translatedText });
-    } catch (error) {
-        const errorMessage = error.response?.data?.error || error.response?.statusText || "Translation failed";
-        if (error.response?.status === 429) {
-            return res.status(429).json({ error: "Too Many Requests: Daily limit exceeded. Try again tomorrow or use a new email/key." });
-        }
-        res.status(500).json({ error: errorMessage });
+    res.json({ translatedText });
+  } catch (error) {
+    const errorMessage =
+      error.response?.data?.error ||
+      error.response?.statusText ||
+      "Translation failed";
+    if (error.response?.status === 429) {
+      return res
+        .status(429)
+        .json({
+          error:
+            "Too Many Requests: Daily limit exceeded. Try again tomorrow or use a new email/key.",
+        });
     }
+    res.status(500).json({ error: errorMessage });
+  }
 };
-
 
 // const axios = require("axios");
 // require("dotenv").config();
