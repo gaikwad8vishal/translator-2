@@ -1,5 +1,5 @@
 import axios from "axios";
-import { ArrowLeftRight, Languages, Mic, MicOff, Volume2 } from "lucide-react";
+import { ArrowLeftRight, Home, Languages, Mic, MicOff, Volume2 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { HiClipboard, HiClipboardCheck } from "react-icons/hi";
 import { FaHistory, FaCamera, FaUpload, FaPaperclip, FaSyncAlt } from "react-icons/fa";
@@ -671,7 +671,7 @@ const Translator = () => {
     <div className="flex flex-col mt-24 justify-center p-4">
       <div className="card p-4 bg-white rounded-2xl shadow-2xl mb-6">
         <div className="flex flex-col sm:flex-row justify-between gap-4">
-          <div className=" w-full sm:w-1/3" onClick={() => setIsFromOpen(!isFromOpen)}>
+          <div className=" relative w-full sm:w-1/3" onClick={() => setIsFromOpen(!isFromOpen)}>
             <button
               onClick={() => setIsFromOpen(!isFromOpen)}
               className="w-full border p-3 rounded-lg flex justify-between items-center"
@@ -724,7 +724,7 @@ const Translator = () => {
             <ArrowLeftRight />
           </button>
 
-          <div className=" w-full sm:w-1/3">
+          <div className="relative w-full sm:w-1/3">
             <button
               onClick={() => setIsToOpen(!isToOpen)}
               className="w-full border p-3 rounded-lg flex justify-between items-center"
@@ -835,7 +835,7 @@ const Translator = () => {
               </div>
             </div>
             {isUploadMenuOpen && (
-              <div className="absolute z-10 left-[200px] md:bottom-[160px] md:left-[450px] bg-white border rounded-lg shadow-lg p-2">
+              <div className="absolute z-10 left-[180px] md:bottom-[80px] md:left-[450px] bg-white border rounded-lg shadow-lg p-2">
                 <button onClick={handleCameraScan} className="flex items-center gap-2 p-2 hover:bg-gray-100 w-full text-left">
                   <FaCamera className="w-4 h-4" /> Camera
                 </button>
@@ -969,12 +969,21 @@ const Translator = () => {
   );
 };
 
+
+
+
+
 const HistorySidebar = ({ isOpen, setIsOpen, history, setHistory }) => {
+  const sidebarRef = useRef(null); // Ref to the sidebar element
+  const backendURL = import.meta.env.VITE_BACKEND_URL || "https://translator-5-6fr1.onrender.com";
+
   const fetchHistory = async () => {
     try {
       const token = localStorage.getItem("token");
       if (!token) return;
-      const response = await axios.get(`${backendURL}/history/all`, { headers: { Authorization: `Bearer ${token}` } });
+      const response = await axios.get(`${backendURL}/history/all`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setHistory(response.data);
     } catch (error) {
       console.error("Error fetching history:", error);
@@ -985,12 +994,31 @@ const HistorySidebar = ({ isOpen, setIsOpen, history, setHistory }) => {
     try {
       const token = localStorage.getItem("token");
       if (!token) return;
-      await axios.delete(`${backendURL}/history/delete/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+      await axios.delete(`${backendURL}/history/delete/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setHistory((prev) => prev.filter((item) => item._id !== id));
     } catch (error) {
       console.error("Error deleting history:", error);
     }
   };
+
+  // Handle outside click to close the sidebar
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isOpen && sidebarRef.current && !sidebarRef.current.contains(event.target)) {
+        setIsOpen(false); // Close the sidebar if the click is outside
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen, setIsOpen]);
 
   useEffect(() => {
     if (isOpen) fetchHistory();
@@ -998,27 +1026,80 @@ const HistorySidebar = ({ isOpen, setIsOpen, history, setHistory }) => {
 
   return (
     <div
-      className={`fixed top-0 z-50 right-0 h-full w-80 bg-white shadow-lg transform transition-transform duration-300 p-4 ${isOpen ? "translate-x-0" : "translate-x-full"}`}
-      style={{ maxHeight: "100vh", overflowY: "auto" }}
+      ref={sidebarRef}
+      className={`fixed top-0 z-50 right-0 h-full w-80 bg-white shadow-lg transform transition-transform duration-300 p-4 ${
+        isOpen ? "translate-x-0" : "translate-x-full"
+      }`}
+      style={{ maxHeight: "100vh", overflowY: "auto", overflowX: "hidden" }}
     >
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold text-purple-800">History</h2>
-        <button className="text-gray-600" onClick={() => setIsOpen(false)}>
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
+        <button
+          className="text-gray-600 p-1 rounded hover:bg-gray-300"
+          onClick={() => setIsOpen(false)}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth="1.5"
+            stroke="currentColor"
+            className="size-6"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"
+            />
           </svg>
         </button>
       </div>
       {history.length === 0 ? (
         <p className="text-gray-500">No history available</p>
       ) : (
-        <ul>
+        <ul className="space-y-4">
           {history.map((item) => (
-            <li key={item._id} className="p-2 border-b border-gray-200 text-gray-700 flex justify-between">
-              <span>{item.input} ({item.from}) → {item.translation} ({item.to})</span>
-              <button onClick={() => deleteHistoryItem(item._id)} className="text-gray-800 text-xs">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+            <li
+              key={item._id}
+              className="p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-200 relative"
+            >
+
+              {/* Decorative Line */}
+              <div className="w-16 h-1 bg-purple-300 rounded mb-3"></div>
+
+              {/* Body: Structured text similar to the image */}
+              <div className="text-gray-700 text-sm">
+                <div className="flex justify-start mb-1">
+                  <span className="text-purple-700 font-semibold">
+                    {item.from.toUpperCase()}→
+                  </span>
+                  <span className="text-purple-700 font-semibold">
+                    {item.to.toUpperCase()}
+                  </span>
+                </div>
+                <p className="mb-1">
+                  {item.input} → {item.translation}
+                </p>
+              </div>
+
+              {/* Delete Button */}
+              <button
+                onClick={() => deleteHistoryItem(item._id)}
+                className="absolute top-2 right-2 text-gray-600 hover:text-red-600"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth="1.5"
+                  stroke="currentColor"
+                  className="size-5"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+                  />
                 </svg>
               </button>
             </li>
@@ -1028,5 +1109,9 @@ const HistorySidebar = ({ isOpen, setIsOpen, history, setHistory }) => {
     </div>
   );
 };
+
+
+
+
 
 export default Translator;
