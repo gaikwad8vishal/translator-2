@@ -67,7 +67,7 @@ const Translator = () => {
   const [isUploadMenuOpen, setIsUploadMenuOpen] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [stream, setStream] = useState(null);
-  const [facingMode, setFacingMode] = useState("user"); // Default to front camera
+  const [facingMode, setFacingMode] = useState("environment"); // Default to front camera
 
   const getCharCount = (text) => text.length;
   const charCount = getCharCount(text);
@@ -515,37 +515,61 @@ const Translator = () => {
       closeCamera();
       return;
     }
-
+  
     setLoading(true);
     setSpeechError("");
-
+  
     try {
       const canvas = canvasRef.current;
       const video = videoRef.current;
-
+  
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       const ctx = canvas.getContext("2d");
       if (!ctx) {
         throw new Error("Unable to get canvas context");
       }
-
+  
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const dataUrl = canvas.toDataURL("image/png");
-
+  
       console.log("Starting Tesseract OCR...");
       const result = await Tesseract.recognize(dataUrl, "eng", {
         logger: (m) => console.log("Tesseract Logger:", m),
       });
-
-      console.log("OCR completed, extracted text:", result.data.text);
-      const extractedText = result.data.text.trim();
-
+  
+      console.log("OCR Result:", result);
+      console.log("Extracted Text:", result.data.text);
+      console.log("Confidence:", result.data.confidence);
+  
+      // Check OCR confidence
+      if (result.data.confidence < 50) {
+        setSpeechError("Text detection confidence too low. Please try a clearer image.");
+        setTimeout(() => setSpeechError(""), 3000);
+        setLoading(false);
+        closeCamera();
+        return;
+      }
+  
+      // Clean the extracted text
+      let extractedText = result.data.text;
+  
+      // Step 1: Remove unwanted symbols, but keep letters, numbers, spaces, @, periods, and line breaks
+      extractedText = extractedText.replace(/[^a-zA-Z0-9\s@.\n]/g, "").trim();
+  
+      // Step 2: Remove multiple spaces, but preserve line breaks
+      extractedText = extractedText.replace(/[ \t]+/g, " ");
+  
+      // Step 3: Remove excessive newlines (e.g., more than 2 consecutive newlines)
+      extractedText = extractedText.replace(/\n{3,}/g, "\n\n");
+  
+      console.log("Cleaned Text:", extractedText);
+  
       if (extractedText) {
         setText(extractedText);
         await translateText(extractedText);
       } else {
-        setSpeechError("No text detected in the image.");
+        setSpeechError("No valid text detected in the image.");
         setTimeout(() => setSpeechError(""), 3000);
       }
     } catch (error) {
@@ -557,7 +581,6 @@ const Translator = () => {
       closeCamera();
     }
   };
-
   const closeCamera = () => {
     if (stream) {
       stream.getTracks().forEach((track) => track.stop());
