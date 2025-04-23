@@ -648,14 +648,14 @@ const Translator = () => {
     <div className="flex flex-col mt-24 justify-center p-4">
       <div className="card p-4 bg-white rounded-2xl shadow-2xl mb-6">
         <div className="flex flex-col sm:flex-row justify-between gap-4">
-          <div className="relative w-full sm:w-1/3" onClick={() => setIsFromOpen(!isFromOpen)}>
+          <div className=" w-full sm:w-1/3" onClick={() => setIsFromOpen(!isFromOpen)}>
             <button
               onClick={() => setIsFromOpen(!isFromOpen)}
               className="w-full border p-3 rounded-lg flex justify-between items-center"
             >
               {languages.find((lang) => lang.code === from)?.name || "Select Language"}
               <svg
-                className="w-4 h-4 ml-2 transition-transform duration-200"
+                className="w-4 h-4 ml-2  transition-transform duration-200"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -693,13 +693,15 @@ const Translator = () => {
               </div>
             )}
           </div>
+
           <button
             onClick={swapLanguages}
             className="p-3 rounded-full hover:bg-gray-200 transition self-center sm:self-auto text-gray-600"
           >
             <ArrowLeftRight />
           </button>
-          <div className="relative w-full sm:w-1/3">
+
+          <div className=" w-full sm:w-1/3">
             <button
               onClick={() => setIsToOpen(!isToOpen)}
               className="w-full border p-3 rounded-lg flex justify-between items-center"

@@ -19,7 +19,7 @@ const Header = () => {
   }, []);
 
   return (
-    <header className="fixed z-90 w-full shadow-md p-4 flex items-center justify-between bg-white text-black">
+    <header className=" z-90 w-full shadow-md p-4 flex items-center justify-between bg-white text-black">
       <h1 className="text-2xl font-semibold">
         <a href="/" className="flex gap-2 items-center">
           <IoLanguageOutline className="text-purple-800" /> PolyglotPro
