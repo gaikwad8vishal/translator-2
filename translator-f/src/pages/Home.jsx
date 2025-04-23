@@ -8,7 +8,7 @@ import Tesseract from "tesseract.js";
 const backendURL = import.meta.env.VITE_BACKEND_URL || "https://translator-5-6fr1.onrender.com";
 
 // Supported Tesseract languages
-const supportedTesseractLangs = ["eng"];
+const supportedTesseractLangs = ["eng", "hin", "tam", "ben"];
 
 // Available languages for translation
 const languages = [
@@ -41,12 +41,14 @@ const Translator = () => {
   const [translatedText, setTranslatedText] = useState("");
   const [from, setFrom] = useState("en");
   const [to, setTo] = useState("hi");
-  const [searchFrom, setSearchFrom] = useState(""); // Search term for 'from' selector
-  const [searchTo, setSearchTo] = useState("");   // Search term for 'to' selector
-  const [isFromOpen, setIsFromOpen] = useState(false); // Toggle for 'from' dropdown
-  const [isToOpen, setIsToOpen] = useState(false);     // Toggle for 'to' dropdown
+  const [searchFrom, setSearchFrom] = useState("");
+  const [searchTo, setSearchTo] = useState("");
+  const [isFromOpen, setIsFromOpen] = useState(false);
+  const [isToOpen, setIsToOpen] = useState(false);
   const textareaRef = useRef(null);
   const outputRef = useRef(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [inputHeight, setInputHeight] = useState("auto");
@@ -63,6 +65,8 @@ const Translator = () => {
   const [isSpeakingOutput, setIsSpeakingOutput] = useState(false);
   const [availableVoices, setAvailableVoices] = useState([]);
   const [isUploadMenuOpen, setIsUploadMenuOpen] = useState(false);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [stream, setStream] = useState(null);
 
   const getCharCount = (text) => text.length;
   const charCount = getCharCount(text);
@@ -105,6 +109,26 @@ const Translator = () => {
       setOutputHeight(`${scrollHeight}px`);
     }
   }, [translatedText, loading]);
+
+  // Add useEffect to attach the stream to the video element
+  useEffect(() => {
+    if (isCameraOpen && stream && videoRef.current) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play().catch((error) => {
+        console.error("Error playing video:", error);
+        setSpeechError("Failed to play video stream. Please ensure camera permissions are granted.");
+        setTimeout(() => setSpeechError(""), 3000);
+      });
+    }
+  }, [isCameraOpen, stream]);
+
+  useEffect(() => {
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, [stream]);
 
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -414,25 +438,88 @@ const Translator = () => {
     }
   };
 
-  const handleCameraScan = () => {
-    alert("Camera scan functionality to be implemented.");
+  const handleCameraScan = async () => {
     setIsUploadMenuOpen(false);
+    setSpeechError("");
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setSpeechError("Camera access is not supported in your browser.");
+      setTimeout(() => setSpeechError(""), 3000);
+      return;
+    }
+
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      setStream(mediaStream);
+      setIsCameraOpen(true);
+    } catch (error) {
+      let errorMessage = "Failed to access camera.";
+      if (error.name === "NotAllowedError") {
+        errorMessage = "Camera access denied. Please allow camera permissions.";
+      } else if (error.name === "NotFoundError") {
+        errorMessage = "No camera found on this device.";
+      }
+      setSpeechError(errorMessage);
+      setTimeout(() => setSpeechError(""), 3000);
+    }
   };
 
-  const initializeTesseractWorker = async () => {
-    console.log("Initializing Tesseract worker for English");
-    const worker = await Tesseract.createWorker({
-      workerPath: "https://unpkg.com/tesseract.js@v5.1.0/dist/worker.min.js",
-      corePath: "https://unpkg.com/tesseract.js-core@v5.1.0/tesseract-core.wasm.js",
-      langPath: "https://tessdata.projectnaptha.com/4.0.0/",
-      logger: (m) => console.log(m),
-    });
+  const captureAndProcessImage = async () => {
+    if (!canvasRef.current || !videoRef.current) {
+      setSpeechError("Camera stream not available. Please reopen the camera.");
+      setTimeout(() => setSpeechError(""), 3000);
+      closeCamera();
+      return;
+    }
 
-    await worker.loadLanguage("eng");
-    await worker.initialize("eng");
+    setLoading(true);
+    setSpeechError("");
 
-    console.log("Tesseract worker initialized successfully for English");
-    return worker;
+    try {
+      const canvas = canvasRef.current;
+      const video = videoRef.current;
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        throw new Error("Unable to get canvas context");
+      }
+
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL("image/png");
+
+      console.log("Starting Tesseract OCR...");
+      const result = await Tesseract.recognize(dataUrl, "eng", {
+        logger: (m) => console.log("Tesseract Logger:", m),
+      });
+
+      console.log("OCR completed, extracted text:", result.data.text);
+      const extractedText = result.data.text.trim();
+
+      if (extractedText) {
+        setText(extractedText);
+        await translateText(extractedText);
+      } else {
+        setSpeechError("No text detected in the image.");
+        setTimeout(() => setSpeechError(""), 3000);
+      }
+    } catch (error) {
+      console.error("Capture or Processing Error:", error);
+      setSpeechError(`Error: ${error.message || "Failed to process image"}`);
+      setTimeout(() => setSpeechError(""), 3000);
+    } finally {
+      setLoading(false);
+      closeCamera();
+    }
+  };
+
+  const closeCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+      setStream(null);
+    }
+    setIsCameraOpen(false);
   };
 
   const handlePhotoUpload = async (event) => {
@@ -444,30 +531,28 @@ const Translator = () => {
 
     try {
       console.log("Processing photo upload...");
-      const worker = await initializeTesseractWorker();
-      const {
-        data: { text },
-      } = await worker.recognize(file);
+      const result = await Tesseract.recognize(file, "eng", {
+        logger: (m) => console.log("Tesseract Logger:", m),
+      });
 
-      const extractedText = text.trim();
-      await worker.terminate();
+      console.log("OCR completed, extracted text:", result.data.text);
+      const extractedText = result.data.text.trim();
 
       if (extractedText) {
         setText(extractedText);
-        textareaRef.current?.focus();
-        textareaRef.current?.select();
+        await translateText(extractedText);
         setIsUploadMenuOpen(false);
       } else {
+        console.error("No text extracted from image.");
         setSpeechError("No text detected in the image.");
         setTimeout(() => setSpeechError(""), 3000);
       }
     } catch (error) {
-      console.error("OCR Error:", error);
-      setSpeechError(`Error extracting text from photo: ${error.message}`);
+      console.error("Photo Upload or Processing Error:", error);
+      setSpeechError(`Error: ${error.message || "Failed to process photo"}`);
       setTimeout(() => setSpeechError(""), 3000);
     } finally {
       setLoading(false);
-      setIsUploadMenuOpen(false);
     }
   };
 
@@ -483,8 +568,7 @@ const Translator = () => {
 
       if (cleanedText) {
         setText(cleanedText);
-        textareaRef.current?.focus();
-        textareaRef.current?.select();
+        translateText(cleanedText);
         setIsUploadMenuOpen(false);
       } else {
         setSpeechError("No text found in the document.");
@@ -518,7 +602,6 @@ const Translator = () => {
 
   return (
     <div className="flex flex-col mt-24 justify-center p-4">
-      {/* Search Panel with Dropdown-integrated Search */}
       <div className="card p-4 bg-white rounded-2xl shadow-2xl mb-6">
         <div className="flex flex-col sm:flex-row justify-between gap-4">
           <div className="relative w-full sm:w-1/3" onClick={() => setIsFromOpen(!isFromOpen)}>
@@ -744,6 +827,39 @@ const Translator = () => {
           </div>
         </div>
       </div>
+      {isCameraOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white p-4 rounded-lg max-w-md w-full" style={{ minHeight: "300px" }}>
+            <div className="relative h-full">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                className="w-full h-full rounded-lg object-cover"
+                style={{ maxHeight: "50vh" }}
+                onCanPlay={() => console.log("Video can play")}
+                onError={(e) => console.error("Video error:", e)}
+              />
+              <canvas ref={canvasRef} className="hidden" />
+            </div>
+            <div className="flex justify-between mt-4">
+              <button
+                onClick={captureAndProcessImage}
+                className="px-4 py-2 bg-purple-800 text-white rounded-lg disabled:opacity-50"
+                disabled={loading}
+              >
+                {loading ? "Scanning..." : "Capture & Extract Text"}
+              </button>
+              <button
+                onClick={closeCamera}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="mt-12">
         <button
           onClick={handleHistoryClick}
