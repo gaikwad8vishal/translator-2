@@ -2,7 +2,7 @@ import axios from "axios";
 import { ArrowLeftRight, Languages, Mic, MicOff, Volume2 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { HiClipboard, HiClipboardCheck } from "react-icons/hi";
-import { FaHistory, FaCamera, FaUpload, FaPaperclip } from "react-icons/fa";
+import { FaHistory, FaCamera, FaUpload, FaPaperclip, FaSyncAlt } from "react-icons/fa";
 import Tesseract from "tesseract.js";
 
 const backendURL = import.meta.env.VITE_BACKEND_URL || "https://translator-5-6fr1.onrender.com";
@@ -67,6 +67,7 @@ const Translator = () => {
   const [isUploadMenuOpen, setIsUploadMenuOpen] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [stream, setStream] = useState(null);
+  const [facingMode, setFacingMode] = useState("user"); // Default to front camera
 
   const getCharCount = (text) => text.length;
   const charCount = getCharCount(text);
@@ -110,7 +111,7 @@ const Translator = () => {
     }
   }, [translatedText, loading]);
 
-  // Add useEffect to attach the stream to the video element
+  // Attach the stream to the video element when the camera is opened or facingMode changes
   useEffect(() => {
     if (isCameraOpen && stream && videoRef.current) {
       videoRef.current.srcObject = stream;
@@ -122,6 +123,7 @@ const Translator = () => {
     }
   }, [isCameraOpen, stream]);
 
+  // Clean up the stream when the component unmounts or camera is closed
   useEffect(() => {
     return () => {
       if (stream) {
@@ -449,7 +451,14 @@ const Translator = () => {
     }
 
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      // Stop any existing stream before starting a new one
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: facingMode },
+      });
       setStream(mediaStream);
       setIsCameraOpen(true);
     } catch (error) {
@@ -461,6 +470,41 @@ const Translator = () => {
       }
       setSpeechError(errorMessage);
       setTimeout(() => setSpeechError(""), 3000);
+    }
+  };
+
+  const toggleCameraFacing = async () => {
+    const newFacingMode = facingMode === "user" ? "environment" : "user";
+    setFacingMode(newFacingMode);
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setSpeechError("Camera access is not supported in your browser.");
+      setTimeout(() => setSpeechError(""), 3000);
+      return;
+    }
+
+    try {
+      // Stop the current stream
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+
+      // Start a new stream with the updated facingMode
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: newFacingMode },
+      });
+      setStream(mediaStream);
+    } catch (error) {
+      let errorMessage = "Failed to switch camera.";
+      if (error.name === "NotAllowedError") {
+        errorMessage = "Camera access denied. Please allow camera permissions.";
+      } else if (error.name === "NotFoundError") {
+        errorMessage = "Requested camera not found on this device.";
+      }
+      setSpeechError(errorMessage);
+      setTimeout(() => setSpeechError(""), 3000);
+      // Revert facingMode if switching fails
+      setFacingMode(facingMode);
     }
   };
 
@@ -829,30 +873,36 @@ const Translator = () => {
       </div>
       {isCameraOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white p-4 rounded-lg max-w-md w-full" style={{ minHeight: "300px" }}>
-            <div className="relative h-full">
+          <div className="bg-white p-4 rounded-lg max-w-md w-full sm:min-h-[300px] sm:max-h-[50vh] min-h-[450px] max-h-[70vh] flex flex-col">
+            <div className="relative flex-1 overflow-hidden rounded-lg">
               <video
                 ref={videoRef}
                 autoPlay
                 playsInline
-                className="w-full h-full rounded-lg object-cover"
-                style={{ maxHeight: "50vh" }}
+                className="w-full h-full object-contain rounded-lg"
                 onCanPlay={() => console.log("Video can play")}
                 onError={(e) => console.error("Video error:", e)}
               />
               <canvas ref={canvasRef} className="hidden" />
             </div>
-            <div className="flex justify-between mt-4">
+            <div className="flex justify-between mt-4 gap-2">
               <button
                 onClick={captureAndProcessImage}
-                className="px-4 py-2 bg-purple-800 text-white rounded-lg disabled:opacity-50"
+                className="px-4 py-2 bg-purple-800 text-white rounded-lg disabled:opacity-50 hover:bg-purple-900 flex-1"
                 disabled={loading}
               >
                 {loading ? "Scanning..." : "Capture & Extract Text"}
               </button>
               <button
+                onClick={toggleCameraFacing}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 flex-1"
+              >
+                <FaSyncAlt className="inline-block mr-2" />
+                {facingMode === "user" ? "Back Camera" : "Front Camera"}
+              </button>
+              <button
                 onClick={closeCamera}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg"
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 flex-1"
               >
                 Cancel
               </button>
