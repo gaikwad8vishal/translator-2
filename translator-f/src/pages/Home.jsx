@@ -874,7 +874,7 @@ const Translator = () => {
       {isCameraOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white p-4 rounded-lg max-w-md w-full sm:min-h-[300px] sm:max-h-[50vh] min-h-[450px] max-h-[70vh] flex flex-col">
-            <div className="relative flex-1 overflow-hidden rounded-lg">
+            <div className="relative w-full flex-1 overflow-hidden rounded-lg">
               <video
                 ref={videoRef}
                 autoPlay
@@ -885,28 +885,44 @@ const Translator = () => {
               />
               <canvas ref={canvasRef} className="hidden" />
             </div>
-            <div className="flex justify-between mt-4 gap-2">
-              <button
-                onClick={captureAndProcessImage}
-                className="px-4 py-2 bg-purple-800 text-white rounded-lg disabled:opacity-50 hover:bg-purple-900 flex-1"
-                disabled={loading}
-              >
-                {loading ? "Scanning..." : "Capture & Extract Text"}
-              </button>
-              <button
-                onClick={toggleCameraFacing}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 flex-1"
-              >
-                <FaSyncAlt className="inline-block mr-2" />
-                {facingMode === "user" ? "Back Camera" : "Front Camera"}
-              </button>
-              <button
-                onClick={closeCamera}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 flex-1"
-              >
-                Cancel
-              </button>
-            </div>
+            <div className="flex justify-between items-center mt-4 gap-2">
+  {/* Toggle Camera Button */}
+  <button
+    onClick={toggleCameraFacing}
+    className="flex-1 px-2 py-2 text-black active:scale-150 transition-transform duration-150 rounded-lg flex items-center justify-center"
+  >
+    <FaSyncAlt className="inline-block mr-2" />
+  </button>
+
+  {/* Capture Button */}
+  <button
+    onClick={captureAndProcessImage}
+    className={`w-16 h-16 rounded-full bg-white border border-gray-300 flex items-center justify-center disabled:opacity-50 hover:bg-gray-100 active:scale-105 transition-transform duration-150 ${
+      loading ? "animate-spin-border" : ""
+    }`}
+    disabled={loading}
+  >
+    <div className="w-8 h-8 bg-black rounded-sm"></div>
+  </button>
+
+  {/* Cancel Button */}
+  <button
+    onClick={closeCamera}
+    className="flex-1 group relative flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-gray-800  hover:text-red-600 transition-all duration-200 ease-in-out active:scale-95"
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className="w-8 h-8 text-red-500 transition-transform duration-200 group-hover:rotate-90"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={4}
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  </button>
+</div>
+
           </div>
         </div>
       )}
