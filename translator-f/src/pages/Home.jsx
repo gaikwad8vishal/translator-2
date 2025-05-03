@@ -867,7 +867,7 @@ const ChatSidebar = ({ isOpen, setIsOpen }) => {
   const [chatInput, setChatInput] = useState("");
   const [from, setFrom] = useState("en");
   const [to, setTo] = useState("en");
-  const [detectedLanguage, setDetectedLanguage] = useState("en");
+  const [detectedLanguage, setDetectedLanguage] = useState("hi");
   const sidebarRef = useRef(null);
   const chatContainerRef = useRef(null);
 
