@@ -1,9 +1,16 @@
 import axios from "axios";
-import { ArrowLeftRight, Home, Languages, Mic, MicOff, Volume2 } from "lucide-react";
+import { ArrowLeftRight, Home, Languages, Mic, MicOff, Volume2, X } from "lucide-react";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { HiClipboard, HiClipboardCheck } from "react-icons/hi";
 import { FaHistory, FaCamera, FaUpload, FaPaperclip, FaSyncAlt } from "react-icons/fa";
+import { IoMdSend } from "react-icons/io";
 import Tesseract from "tesseract.js";
+import { MessageSquare } from "lucide-react";
+
+import { LanguageSelector } from "../components/LanguageSelector";
+import { useGeolocation } from "../components/languagebylocation";
+
+
 
 const backendURL = import.meta.env.VITE_BACKEND_URL || "https://translator-5-6fr1.onrender.com";
 
@@ -36,7 +43,7 @@ const languages = [
 ];
 
 // Hook: Handle translation API calls and history
-const useTranslation = () => {
+export  const useTranslation = () => {
   const [translatedText, setTranslatedText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -423,118 +430,7 @@ const useCamera = () => {
   return { stream, startCamera, stopCamera, toggleCameraFacing, captureAndProcessImage, videoRef, canvasRef, error, setError };
 };
 
-// Hook: Handle geolocation and language detection
-const useGeolocation = (setTo, setDetectedLanguage) => {
-  const [error, setError] = useState("");
 
-  const setFallbackLanguage = useCallback(() => {
-    const browserLang = navigator.language.split("-")[0];
-    const validLang = languages.find((lang) => lang.code === browserLang)?.code || "en";
-    setDetectedLanguage(validLang);
-    setTo(validLang);
-  }, [setDetectedLanguage, setTo]);
-
-  const fetchLocationAndSetLanguage = useCallback(
-    async (lat, lon, retries = 3) => {
-      while (retries > 0) {
-        try {
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
-            { headers: { "User-Agent": "TranslatorApp/1.0 (your@email.com)" }, timeout: 10000 }
-          );
-          if (!response.ok) throw new Error(`Nominatim API error: ${response.status}`);
-          const data = await response.json();
-          const state = data.address?.state;
-          const country = data.address?.country;
-
-          const stateToLanguage = {
-            Maharashtra: "mr", "Uttar Pradesh": "hi", "West Bengal": "bn", "Tamil Nadu": "ta",
-            Gujarat: "gu", Karnataka: "kn", Rajasthan: "hi", Punjab: "pa", Bihar: "hi",
-            Kerala: "ml", Telangana: "te", "Andhra Pradesh": "te", "Madhya Pradesh": "hi",
-            Odisha: "or", Assam: "as", Jharkhand: "hi", Chhattisgarh: "hi", Haryana: "hi",
-            "Himachal Pradesh": "hi", Uttarakhand: "hi", Manipur: "mtei", Meghalaya: "en",
-            Mizoram: "en", Nagaland: "en", Sikkim: "ne", Tripura: "bn", "Arunachal Pradesh": "en",
-            Goa: "kn", Delhi: "hi", "Jammu and Kashmir": "ur", Ladakh: "hi",
-          };
-
-          const countryToLanguage = {
-            India: "hi", China: "zh", Japan: "ja", Germany: "de", France: "fr", Spain: "es",
-            Italy: "it", Brazil: "pt", Russia: "ru", "United States": "en", "United Kingdom": "en",
-            Canada: "en", Australia: "en", Nigeria: "en", "South Africa": "en", Mexico: "es",
-            Argentina: "es", "South Korea": "ko", Indonesia: "id", Pakistan: "ur", Bangladesh: "bn",
-            Turkey: "tr", Egypt: "ar", "Saudi Arabia": "ar", Thailand: "th", Vietnam: "vi",
-          };
-
-          let detectedLang = "en";
-          if (country === "India" && state && stateToLanguage[state]) detectedLang = stateToLanguage[state];
-          else if (country && countryToLanguage[country]) detectedLang = countryToLanguage[country];
-          const validLang = languages.find((lang) => lang.code === detectedLang)?.code || "en";
-          setDetectedLanguage(validLang);
-          setTo(validLang);
-          setError("");
-          return;
-        } catch (error) {
-          retries--;
-          if (retries === 0) {
-            setError("Failed to detect location. Using default language.");
-            setTimeout(() => setError(""), 5000);
-            setFallbackLanguage();
-          }
-          await new Promise((resolve) => setTimeout(resolve, 1000 * (4 - retries)));
-        }
-      }
-    },
-    [setDetectedLanguage, setTo, setFallbackLanguage]
-  );
-
-  const getUserLanguage = useCallback(
-    (retries = 3) => {
-      if (!navigator.geolocation) {
-        setError("Geolocation is not supported by your browser.");
-        setTimeout(() => setError(""), 2000);
-        setFallbackLanguage();
-        return;
-      }
-
-      const attemptGeolocation = (attempt) => {
-        navigator.geolocation.getCurrentPosition(
-          async (position) => {
-            const { latitude, longitude } = position.coords;
-            fetchLocationAndSetLanguage(latitude, longitude);
-          },
-          (error) => {
-            if (error.code === error.POSITION_UNAVAILABLE && attempt < retries) {
-              setTimeout(() => attemptGeolocation(attempt + 1), 2000 * attempt);
-              return;
-            }
-            let errorMessage = "An error occurred while accessing your location.";
-            switch (error.code) {
-              case error.PERMISSION_DENIED:
-                errorMessage = "Please allow location access for better language detection.";
-                break;
-              case error.POSITION_UNAVAILABLE:
-                errorMessage = "Location information unavailable. Using default language.";
-                break;
-              case error.TIMEOUT:
-                errorMessage = "Location request timed out. Try again later.";
-                break;
-              default:
-                errorMessage = "An unexpected error occurred. Using default language.";
-            }
-            setError(errorMessage);
-            setTimeout(() => setError(""), 5000);
-            setFallbackLanguage();
-          },
-          { timeout: 30000, maximumAge: 300000, enableHighAccuracy: false }
-        );
-      };
-      attemptGeolocation(1);
-    },
-    [fetchLocationAndSetLanguage, setFallbackLanguage]
-  );
-
-  return { getUserLanguage, error, setError };
-};
 
 // Component: Error message display
 const ErrorMessage = ({ error, onClose, onRetry }) => {
@@ -564,66 +460,6 @@ const ErrorMessage = ({ error, onClose, onRetry }) => {
           </svg>
         </button>
       </div>
-    </div>
-  );
-};
-
-// Component: Language selector dropdown
-const LanguageSelector = ({ selectedLang, onSelect, isOpen, setIsOpen, search, setSearch }) => {
-  const filteredLanguages = useMemo(
-    () => languages.filter((lang) => lang.name.toLowerCase().includes(search.toLowerCase())),
-    [search]
-  );
-
-  return (
-    <div className="relative w-full" onClick={() => setIsOpen(!isOpen)}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full border p-3 rounded-lg flex justify-between items-center"
-        aria-label={`Select ${selectedLang} language`}
-      >
-        {languages.find((lang) => lang.code === selectedLang)?.name || "Select Language"}
-        <svg
-          className="w-4 h-4 ml-2 transition-transform duration-200"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          xmlns="http://www.w3.org/2000/svg"
-          style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      {isOpen && (
-        <div className="absolute z-10 w-full bg-white border rounded-lg shadow-lg mt-1">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search languages..."
-            className="w-full p-2 border-b rounded-t-lg focus:outline-none"
-            autoFocus
-            aria-label="Search languages"
-          />
-          <div className="max-h-40 overflow-y-auto">
-            {filteredLanguages.sort((a, b) => a.name.localeCompare(b.name)).map((lang) => (
-              <div
-                key={lang.code}
-                onClick={() => {
-                  onSelect(lang.code);
-                  setSearch("");
-                  setIsOpen(false);
-                }}
-                className="p-2 hover:bg-gray-100 cursor-pointer"
-                role="option"
-                aria-selected={selectedLang === lang.code}
-              >
-                {lang.name}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
@@ -691,7 +527,7 @@ const TextInput = ({
           className="text-gray-500 hover:text-gray-700"
           aria-label={isListening ? "Stop microphone" : "Start microphone"}
         >
-          {isListening ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+          {isListening ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
         </button>
         <div className="flex gap-4">
           <button
@@ -950,7 +786,7 @@ const HistorySidebar = ({ isOpen, setIsOpen, history, setHistory }) => {
   return (
     <div
       ref={sidebarRef}
-      className={`fixed top-0 z-50 right-0 h-full w-80 bg-white shadow-lg transform transition-transform duration-300 p-4 ${
+      className={`fixed top-0 z-50 w-96 right-0 h-full w-80 bg-white shadow-lg transform transition-transform duration-300 p-4 ${
         isOpen ? "translate-x-0" : "translate-x-full"
       }`}
       style={{ maxHeight: "100vh", overflowY: "auto", overflowX: "hidden" }}
@@ -1026,8 +862,264 @@ const HistorySidebar = ({ isOpen, setIsOpen, history, setHistory }) => {
   );
 };
 
+const ChatSidebar = ({ isOpen, setIsOpen }) => {
+  const [chatHistory, setChatHistory] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const [from, setFrom] = useState("en");
+  const [to, setTo] = useState("en");
+  const [detectedLanguage, setDetectedLanguage] = useState("en");
+  const sidebarRef = useRef(null);
+  const chatContainerRef = useRef(null);
 
+  const { getUserLanguage, error: geoError, setError: setGeoError } = useGeolocation(setTo, setDetectedLanguage);
+  const { isListening, startSpeechRecognition, stopSpeechRecognition, error: speechError, setError: setSpeechError } = useSpeech(from, (transcript) => setChatInput((prev) => prev + transcript));
 
+  useEffect(() => {
+    if (isOpen) {
+      getUserLanguage();
+    }
+  }, [isOpen, getUserLanguage]);
+
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [chatHistory]);
+
+  const handleSendMessage = useCallback(async () => {
+    if (!chatInput.trim()) return;
+
+    const userMessageId = Date.now();
+    const userMessage = { type: "user", text: chatInput, id: userMessageId, from, to };
+    setChatHistory((prev) => [...prev, userMessage]);
+    setChatInput("");
+
+    try {
+      const response = await axios.post(
+        `${backendURL}/translate/`,
+        { text: chatInput, from, to },
+        { headers: { "Content-Type": "application/json" } }
+      );
+      const translated = response.data.translatedText;
+      if (translated.startsWith("Error:")) {
+        setChatHistory((prev) => [
+          ...prev,
+          { type: "bot", text: `Error: ${translated.replace("Error: ", "")}`, id: Date.now() + 1, from, to, userMessageId },
+        ]);
+      } else {
+        setChatHistory((prev) => [
+          ...prev,
+          { type: "bot", text: translated, id: Date.now() + 1, from, to, userMessageId },
+        ]);
+      }
+    } catch (error) {
+      setChatHistory((prev) => [
+        ...prev,
+        { type: "bot", text: `Error: ${error.message}`, id: Date.now() + 1, from, to, userMessageId },
+      ]);
+    }
+  }, [chatInput, from, to]);
+
+  const handleLanguageChange = useCallback(async (msgId, newFrom, newTo) => {
+    const message = chatHistory.find((msg) => msg.id === msgId);
+    if (!message) return;
+
+    let originalText;
+    let originalFrom;
+    if (message.type === "user") {
+      originalText = message.text;
+      originalFrom = newFrom || message.from;
+    } else {
+      const userMessage = chatHistory.find((m) => m.id === message.userMessageId);
+      if (!userMessage) return;
+      originalText = userMessage.text;
+      originalFrom = userMessage.from;
+    }
+
+    try {
+      const response = await axios.post(
+        `${backendURL}/translate/`,
+        { text: originalText, from: newFrom || originalFrom, to: newTo || message.to },
+        { headers: { "Content-Type": "application/json" } }
+      );
+      const translated = response.data.translatedText;
+
+      setChatHistory((prev) =>
+        prev.map((msg) =>
+          msg.id === msgId
+            ? {
+                ...msg,
+                from: newFrom || msg.from,
+                to: newTo || msg.to,
+                text: msg.type === "bot" ? translated : msg.text,
+                error: translated.startsWith("Error:") ? translated.replace("Error: ", "") : null,
+              }
+            : msg
+        )
+      );
+    } catch (error) {
+      setChatHistory((prev) =>
+        prev.map((msg) =>
+          msg.id === msgId
+            ? { ...msg, from: newFrom || msg.from, to: newTo || msg.to, text: `Error: ${error.message}`, error: error.message }
+            : msg
+        )
+      );
+    }
+  }, [chatHistory]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isOpen && sidebarRef.current && !sidebarRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen, setIsOpen]);
+
+  return (
+    <div
+      ref={sidebarRef}
+      className={`fixed top-0 z-50 w-96 right-0 h-full bg-white shadow-lg transform transition-transform duration-300 p-4 ${
+        isOpen ? "translate-x-0" : "translate-x-full"
+      }`}
+      style={{ maxHeight: "100vh", overflowY: "auto", overflowX: "hidden" }}
+      aria-label="Chat section"
+    >
+      <div className="flex justify-between border rounded-md p-1 px-2 items-center mb-4">
+        <h2 className="text-xl font-semibold text-purple-800">Chat</h2>
+        <button
+          className="text-gray-600 p-1 rounded hover:bg-gray-300"
+          onClick={() => setIsOpen(false)}
+          aria-label="Close chat"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth="1.5"
+            stroke="currentColor"
+            className="size-6"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"
+            />
+          </svg>
+        </button>
+      </div>
+
+      {/* Error Display */}
+      {(geoError || speechError) && (
+        <div className="text-red-500 text-sm mb-2">{geoError || speechError}</div>
+      )}
+
+      <div className="flex border rounded-md bg-slate-100 flex-col h-[calc(100%-4rem)]">
+        <div
+          ref={chatContainerRef}
+          className="flex-1 overflow-y-auto p-2 space-y-4"
+        >
+          {chatHistory.length === 0 ? (
+            <p className="text-gray-500">Start chatting...</p>
+          ) : (
+            chatHistory.map((msg) => (
+              <div
+                key={msg.id}
+                className={`flex ${
+                  msg.type === "user" ? "justify-end" : "justify-start"
+                }`}
+              >
+                <div className="max-w-[80%]">
+                  <div className="text-xs text-gray-600 mb-1">
+                    {msg.type === "user" ? (
+                      <div className="flex-1">
+                        <select
+                          id={`from-${msg.id}`}
+                          value={msg.from}
+                          onChange={(e) => handleLanguageChange(msg.id, e.target.value, null)}
+                          className="w-full p-1 border rounded-lg focus:outline-none text-xs"
+                        >
+                          {languages.map((lang) => (
+                            <option key={lang.code} value={lang.code}>
+                              {lang.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="flex-1">
+                        <select
+                          id={`to-${msg.id}`}
+                          value={msg.to}
+                          onChange={(e) => handleLanguageChange(msg.id, null, e.target.value)}
+                          className="w-full p-1 border rounded-lg focus:outline-none text-xs"
+                        >
+                          {languages.map((lang) => (
+                            <option key={lang.code} value={lang.code}>
+                              {lang.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                  <div
+                    className={`px-2 py-1 rounded-lg ${
+                      msg.type === "user"
+                        ? "bg-purple-100 text-purple-900"
+                        : "bg-slate-200 text-gray-900"
+                    }`}
+                  >
+                    {msg.text}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Language Selection and Input */}
+        <div className="p-2 border-t">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              placeholder="Type your message..."
+              className="flex-1 p-2 border rounded-lg focus:outline-none"
+              onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+              aria-label="Chat input"
+            />
+            <button
+              onClick={() => (isListening ? stopSpeechRecognition() : startSpeechRecognition())}
+              className={`p-2 rounded-lg text-white ${
+                isListening ? "bg-red-600 hover:bg-red-700" : "bg-purple-800 hover:bg-purple-900"
+              }`}
+              aria-label={isListening ? "Stop microphone" : "Start microphone"}
+            >
+              {isListening ? <MicOff size={20} /> : <Mic size={20} />}
+            </button>
+            <button
+              onClick={handleSendMessage}
+              className="p-2 bg-purple-800 text-white rounded-lg hover:bg-purple-900"
+              aria-label="Send message"
+            >
+              <IoMdSend />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 
 // Main Component: Translator
@@ -1043,6 +1135,7 @@ const Translator = () => {
   const [loginWarning, setLoginWarning] = useState("");
   const [detectedLanguage, setDetectedLanguage] = useState("en");
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const { translatedText, loading, error: translationError, setError: setTranslationError, history, setHistory, translateText } = useTranslation();
   const { isListening, startSpeechRecognition, stopSpeechRecognition, speakText, error: speechError, setError: setSpeechError, isSpeaking } = useSpeech(from, (transcript) => setText((prev) => prev + transcript));
@@ -1074,7 +1167,13 @@ const Translator = () => {
       setTimeout(() => setLoginWarning(""), 3000);
       return;
     }
-    setIsHistoryOpen(true);
+    setIsChatOpen(false); // Close chat sidebar if open
+    setIsHistoryOpen((prev) => !prev); // Toggle history sidebar
+  }, []);
+
+  const handleChatClick = useCallback(() => {
+    setIsHistoryOpen(false); // Close history sidebar if open
+    setIsChatOpen((prev) => !prev); // Toggle chat sidebar
   }, []);
 
   const handlePhotoUpload = useCallback(
@@ -1204,23 +1303,38 @@ const Translator = () => {
         }}
       />
 
-      <div className="mt-12">
+    <div className="fixed bottom-0 left-0 w-full bg-white shadow-lg flex justify-around items-center py-3 md:flex md:gap-4 md:bottom-4 md:justify-center border  md:bg-transparent md:shadow-none" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+          <button
+          onClick={handleChatClick}
+          className="p-3 rounded-full bg-purple-800 text-white md:shadow-lg"
+          aria-label={isChatOpen ? "Close chat" : "Open chat"}
+        >
+          {isChatOpen ? <X size={24} className="md:size-6" /> : <MessageSquare size={24} className="md:size-6" />}
+        </button>
         <button
           onClick={handleHistoryClick}
-          className="fixed bottom-4 right-4 p-3 rounded-full shadow-lg bg-purple-800 text-white"
-          aria-label="View history"
+          className="p-3 rounded-full bg-purple-800 text-white md:shadow-lg"
+          aria-label={isHistoryOpen ? "Close history" : "View history"}
         >
-          <FaHistory size={24} />
+          {isHistoryOpen ? <X size={24} className="md:size-6" /> : <FaHistory size={24} className="md:size-6" />}
         </button>
-        <HistorySidebar
-          isOpen={isHistoryOpen}
-          setIsOpen={setIsHistoryOpen}
-          history={history}
-          setHistory={setHistory}
-        />
       </div>
+      <HistorySidebar
+        isOpen={isHistoryOpen}
+        setIsOpen={setIsHistoryOpen}
+        history={history}
+        setHistory={setHistory}
+      />
+      <ChatSidebar
+        isOpen={isChatOpen}
+        setIsOpen={setIsChatOpen}
+        translateText={translateText}
+        from={from}
+        to={to}
+      />
     </div>
   );
 };
+
 
 export default Translator;
