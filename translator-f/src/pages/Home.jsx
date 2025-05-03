@@ -88,6 +88,7 @@ const useTranslation = () => {
   return { translatedText, loading, error, setError, history, setHistory, translateText };
 };
 
+
 // Hook: Handle speech recognition and text-to-speech
 const useSpeech = (lang, onResult) => {
   const [isListening, setIsListening] = useState(false);
@@ -96,6 +97,7 @@ const useSpeech = (lang, onResult) => {
   const [availableVoices, setAvailableVoices] = useState([]);
   const recognitionRef = useRef(null);
 
+  // Load available voices for speech synthesis
   useEffect(() => {
     const updateVoices = () => {
       const voices = window.speechSynthesis.getVoices();
@@ -108,6 +110,7 @@ const useSpeech = (lang, onResult) => {
     };
   }, []);
 
+  // Start speech recognition
   const startSpeechRecognition = useCallback(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -116,20 +119,21 @@ const useSpeech = (lang, onResult) => {
       return;
     }
 
+    // Prevent multiple recognition instances
+    if (isListening) {
+      return;
+    }
+
     const recognition = new SpeechRecognition();
     recognitionRef.current = recognition;
     recognition.lang = lang === "auto" ? "en-US" : `${lang}-${lang.toUpperCase()}`;
-    recognition.interimResults = true;
-    recognition.continuous = true;
+    recognition.interimResults = false; // Disable interim results to avoid partial repeats
+    recognition.continuous = false; // Disable continuous mode to avoid multiple triggers
 
     recognition.onresult = (event) => {
-      let finalTranscript = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript;
-        }
-      }
-      if (finalTranscript) onResult(finalTranscript);
+      const finalTranscript = event.results[0][0].transcript; // Process only final result
+      onResult(finalTranscript);
+      recognition.stop(); // Stop recognition after final result
     };
 
     recognition.onerror = (event) => {
@@ -153,7 +157,6 @@ const useSpeech = (lang, onResult) => {
       setError(errorMessage);
       setTimeout(() => setError(""), 3000);
       setIsListening(false);
-      recognition.stop();
     };
 
     recognition.onend = () => {
@@ -162,8 +165,9 @@ const useSpeech = (lang, onResult) => {
 
     recognition.start();
     setIsListening(true);
-  }, [lang, onResult]);
+  }, [lang, onResult, isListening]);
 
+  // Stop speech recognition
   const stopSpeechRecognition = useCallback(() => {
     if (recognitionRef.current) {
       recognitionRef.current.stop();
@@ -171,6 +175,7 @@ const useSpeech = (lang, onResult) => {
     }
   }, []);
 
+  // Speak text using speech synthesis
   const speakText = useCallback(
     (textToSpeak, lang) => {
       if (!window.speechSynthesis) {
@@ -179,12 +184,9 @@ const useSpeech = (lang, onResult) => {
         return;
       }
 
+      // Stop any ongoing speech and recognition to prevent overlap/feedback
       window.speechSynthesis.cancel();
-
-      if (isSpeaking) {
-        setIsSpeaking(false);
-        return;
-      }
+      stopSpeechRecognition();
 
       if (!textToSpeak.trim()) {
         setError("No text to read aloud.");
@@ -192,25 +194,58 @@ const useSpeech = (lang, onResult) => {
         return;
       }
 
+      // Prevent multiple speak calls while speaking
+      if (isSpeaking) {
+        return;
+      }
+
       const utterance = new SpeechSynthesisUtterance(textToSpeak);
       const langMap = {
-        ar: "ar-SA", as: "as-IN", bn: "bn-IN", brx: "brx-IN", de: "de-DE", en: "en-US",
-        es: "es-ES", fr: "fr-FR", gbm: "gbm-IN", gu: "gu-IN", hi: "hi-IN", it: "it-IT",
-        ja: "ja-JP", kfy: "kfy-IN", kn: "kn-IN", ko: "ko-KR", ml: "ml-IN", mr: "mr-IN",
-        mtei: "mni-IN", or: "or-IN", pa: "pa-IN", pt: "pt-BR", ru: "ru-RU", ta: "ta-IN",
-        tcy: "tcy-IN", te: "te-IN", zh: "zh-CN",
+        ar: "ar-SA",
+        as: "as-IN",
+        bn: "bn-IN",
+        brx: "brx-IN",
+        de: "de-DE",
+        en: "en-US",
+        es: "es-ES",
+        fr: "fr-FR",
+        gbm: "gbm-IN",
+        gu: "gu-IN",
+        hi: "hi-IN",
+        it: "it-IT",
+        ja: "ja-JP",
+        kfy: "kfy-IN",
+        kn: "kn-IN",
+        ko: "ko-KR",
+        ml: "ml-IN",
+        mr: "mr-IN",
+        mtei: "mni-IN",
+        or: "or-IN",
+        pa: "pa-IN",
+        pt: "pt-BR",
+        ru: "ru-RU",
+        ta: "ta-IN",
+        tcy: "tcy-IN",
+        te: "te-IN",
+        zh: "zh-CN",
       };
       const speechLang = langMap[lang] || "en-US";
       utterance.lang = speechLang;
 
-      const matchingVoice = availableVoices.find((voice) => voice.lang === speechLang);
-      if (matchingVoice) utterance.voice = matchingVoice;
-      else {
-        setError(`No voice available for ${lang}. Try installing a ${lang} language pack.`);
+      // Select matching voice or fallback to en-US
+      const matchingVoice =
+        availableVoices.find((voice) => voice.lang === speechLang) ||
+        availableVoices.find((voice) => voice.lang === "en-US");
+      if (matchingVoice) {
+        utterance.voice = matchingVoice;
+      } else {
+        setError(`No voice available for ${lang}. Falling back to default or install a ${lang} language pack.`);
         setTimeout(() => setError(""), 5000);
       }
 
-      utterance.onend = () => setIsSpeaking(false);
+      utterance.onend = () => {
+        setIsSpeaking(false);
+      };
       utterance.onerror = (event) => {
         setError(`Speech synthesis error: ${event.error}`);
         setTimeout(() => setError(""), 3000);
@@ -220,18 +255,30 @@ const useSpeech = (lang, onResult) => {
       window.speechSynthesis.speak(utterance);
       setIsSpeaking(true);
     },
-    [availableVoices, isSpeaking]
+    [availableVoices, isSpeaking, stopSpeechRecognition]
   );
 
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (recognitionRef.current) recognitionRef.current.stop();
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
       window.speechSynthesis.cancel();
     };
   }, []);
 
-  return { isListening, startSpeechRecognition, stopSpeechRecognition, speakText, error, setError, isSpeaking };
+  return {
+    isListening,
+    startSpeechRecognition,
+    stopSpeechRecognition,
+    speakText,
+    error,
+    setError,
+    isSpeaking,
+  };
 };
+
 
 // Hook: Handle camera stream and OCR
 const useCamera = () => {
@@ -1089,7 +1136,7 @@ const Translator = () => {
   );
 
   return (
-    <div className="flex flex-col md:mt-8 justify-center p-4">
+    <div className="flex flex-col md:mt-4 justify-center p-4">
       <div className="card p-4 bg-white rounded-2xl shadow-2xl mb-6">
         <div className="flex flex-col sm:flex-row justify-between gap-4">
           <LanguageSelector
