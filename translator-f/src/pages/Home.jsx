@@ -1,5 +1,5 @@
 import axios from "axios";
-import { ArrowLeftRight, Home, Languages, Mic, MicOff, Volume2, X } from "lucide-react";
+import { ArrowLeftRight, Home, Languages, Mic, MicOff, Users, Volume2, X } from "lucide-react";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { HiClipboard, HiClipboardCheck } from "react-icons/hi";
 import { FaHistory, FaCamera, FaUpload, FaPaperclip, FaSyncAlt } from "react-icons/fa";
@@ -9,10 +9,11 @@ import { MessageSquare } from "lucide-react";
 
 import { LanguageSelector } from "../components/LanguageSelector";
 import { useGeolocation } from "../components/languagebylocation";
+import LiveChatSidebar from "../components/LiveChatbar";
+  
 
 
-
-const backendURL = import.meta.env.VITE_BACKEND_URL || "https://translator-5-6fr1.onrender.com";
+const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
 
 
 
@@ -97,7 +98,7 @@ export  const useTranslation = () => {
 
 
 // Hook: Handle speech recognition and text-to-speech
-const useSpeech = (lang, onResult) => {
+export const useSpeech = (lang, onResult) => {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [error, setError] = useState("");
@@ -1105,7 +1106,7 @@ const ChatSidebar = ({ isOpen, setIsOpen }) => {
               }`}
               aria-label={isListening ? "Stop microphone" : "Start microphone"}
             >
-              {isListening ? <MicOff size={20} /> : <Mic size={20} />}
+              {isListening ? <Mic size={20} /> : <MicOff size={20} />}
             </button>
             <button
               onClick={handleSendMessage}
@@ -1123,6 +1124,7 @@ const ChatSidebar = ({ isOpen, setIsOpen }) => {
 
 
 // Main Component: Translator
+
 const Translator = () => {
   const [text, setText] = useState("");
   const [from, setFrom] = useState("en");
@@ -1133,9 +1135,10 @@ const Translator = () => {
   const [isToOpen, setIsToOpen] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [loginWarning, setLoginWarning] = useState("");
-  const [detectedLanguage, setDetectedLanguage] = useState("en");
+  const [detectedLanguage, setDetectedLanguage] = useState("hi");
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isLiveChatOpen, setIsLiveChatOpen] = useState(false); // New state for LiveChatSidebar
 
   const { translatedText, loading, error: translationError, setError: setTranslationError, history, setHistory, translateText } = useTranslation();
   const { isListening, startSpeechRecognition, stopSpeechRecognition, speakText, error: speechError, setError: setSpeechError, isSpeaking } = useSpeech(from, (transcript) => setText((prev) => prev + transcript));
@@ -1148,7 +1151,6 @@ const Translator = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (text.trim()) translateText(text, from, to);
-      else setTranslatedText("");
     }, 500);
     return () => clearTimeout(timer);
   }, [text, from, to, translateText]);
@@ -1167,13 +1169,21 @@ const Translator = () => {
       setTimeout(() => setLoginWarning(""), 3000);
       return;
     }
-    setIsChatOpen(false); // Close chat sidebar if open
-    setIsHistoryOpen((prev) => !prev); // Toggle history sidebar
+    setIsChatOpen(false);
+    setIsLiveChatOpen(false); // Close live chat if open
+    setIsHistoryOpen((prev) => !prev);
   }, []);
 
   const handleChatClick = useCallback(() => {
-    setIsHistoryOpen(false); // Close history sidebar if open
-    setIsChatOpen((prev) => !prev); // Toggle chat sidebar
+    setIsHistoryOpen(false);
+    setIsLiveChatOpen(false); // Close live chat if open
+    setIsChatOpen((prev) => !prev);
+  }, []);
+
+  const handleLiveChatClick = useCallback(() => {
+    setIsHistoryOpen(false);
+    setIsChatOpen(false); // Close static chat if open
+    setIsLiveChatOpen((prev) => !prev);
   }, []);
 
   const handlePhotoUpload = useCallback(
@@ -1303,13 +1313,20 @@ const Translator = () => {
         }}
       />
 
-    <div className="fixed bottom-0 left-0 w-full bg-white shadow-lg flex justify-around items-center py-3 md:flex md:gap-4 md:bottom-4 md:justify-center border  md:bg-transparent md:shadow-none" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
-          <button
+      <div className="fixed bottom-0 left-0 w-full bg-white shadow-lg flex justify-around items-center py-3 md:flex md:gap-4 md:bottom-4 md:justify-center border md:bg-transparent md:shadow-none" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+        <button
           onClick={handleChatClick}
           className="p-3 rounded-full bg-purple-800 text-white md:shadow-lg"
           aria-label={isChatOpen ? "Close chat" : "Open chat"}
         >
           {isChatOpen ? <X size={24} className="md:size-6" /> : <MessageSquare size={24} className="md:size-6" />}
+        </button>
+        <button
+          onClick={handleLiveChatClick}
+          className="p-3 rounded-full bg-purple-800 text-white md:shadow-lg"
+          aria-label={isLiveChatOpen ? "Close live chat" : "Open live chat"}
+        >
+          {isLiveChatOpen ? <X size={24} className="md:size-6" /> : <Users size={24} className="md:size-6" />}
         </button>
         <button
           onClick={handleHistoryClick}
@@ -1332,9 +1349,14 @@ const Translator = () => {
         from={from}
         to={to}
       />
+      <LiveChatSidebar
+        isOpen={isLiveChatOpen}
+        setIsOpen={setIsLiveChatOpen}
+        from={from}
+        to={to}
+      />
     </div>
   );
 };
-
 
 export default Translator;

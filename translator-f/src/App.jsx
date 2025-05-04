@@ -6,6 +6,7 @@ import { AuthProvider } from "./utils/api";
 import Translator from "./pages/Home";
 import AuthWatcher from "./components/authwatcher";
 import { ThemeProvider } from "./components/Therechanger";
+import Baboo from "./components/try";
  // ✅ Import yaha karo
 
 function App() {

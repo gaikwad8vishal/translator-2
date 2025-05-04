@@ -36,7 +36,7 @@ export  const useGeolocation = (setTo, setDetectedLanguage) => {
 
   const setFallbackLanguage = useCallback(() => {
     const browserLang = navigator.language.split("-")[0];
-    const validLang = languages.find((lang) => lang.code === browserLang)?.code || "en";
+    const validLang = languages.find((lang) => lang.code === browserLang)?.code || "hi";
     setDetectedLanguage(validLang);
     setTo(validLang);
   }, [setDetectedLanguage, setTo]);
@@ -72,10 +72,10 @@ export  const useGeolocation = (setTo, setDetectedLanguage) => {
             Turkey: "tr", Egypt: "ar", "Saudi Arabia": "ar", Thailand: "th", Vietnam: "vi",
           };
 
-          let detectedLang = "en";
+          let detectedLang = "hi";
           if (country === "India" && state && stateToLanguage[state]) detectedLang = stateToLanguage[state];
           else if (country && countryToLanguage[country]) detectedLang = countryToLanguage[country];
-          const validLang = languages.find((lang) => lang.code === detectedLang)?.code || "en";
+          const validLang = languages.find((lang) => lang.code === detectedLang)?.code || "hi";
           setDetectedLanguage(validLang);
           setTo(validLang);
           setError("");
