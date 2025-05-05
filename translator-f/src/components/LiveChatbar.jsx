@@ -13,7 +13,6 @@ const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
 const languages = [
   { code: "as", name: "Assamese" },
   { code: "bn", name: "Bengali" },
-  { code: "brx", name: "Bodo" },
   { code: "en", name: "English" },
   { code: "gbm", name: "Garhwali" },
   { code: "gu", name: "Gujarati" },
@@ -45,15 +44,18 @@ const LiveChatSidebar = ({ isOpen, setIsOpen }) => {
   const [error, setError] = useState("");
   const [isConnected, setIsConnected] = useState(false);
   const [from, setFrom] = useState("en"); // User's input language
-  const [to, setTo] = useState("hi"); // User's preferred display language
+  const [to, setTo] = useState("hi"); // Default display language for incoming messages
   const [detectedLanguage, setDetectedLanguage] = useState("hi"); // Detected language from geolocation
   const [isLanguageManuallySet, setIsLanguageManuallySet] = useState(false); // Track manual language selection
   const chatContainerRef = useRef(null);
   const sidebarRef = useRef(null);
+  const textareaRef = useRef(null);
   const reconnectAttempts = useRef(0);
   const maxReconnectAttempts = 5;
   const reconnectInterval = useRef(1000);
   const clientId = useRef(Date.now().toString());
+  const [inputHeight, setInputHeight] = useState("auto");
+  const reconnectTimeoutRef = useRef(null); // To store setTimeout ID for cleanup
 
   // Speech recognition and geolocation hooks
   const { isListening, startSpeechRecognition, stopSpeechRecognition, error: speechError, setError: setSpeechError } = useSpeech(
@@ -69,6 +71,16 @@ const LiveChatSidebar = ({ isOpen, setIsOpen }) => {
     },
     setDetectedLanguage
   );
+
+  // Adjust textarea height dynamically
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      const scrollHeight = textareaRef.current.scrollHeight;
+      textareaRef.current.style.height = `${scrollHeight}px`;
+      setInputHeight(`${scrollHeight}px`);
+    }
+  }, [chatInput]);
 
   // Translate a message
   const translateMessage = useCallback(
@@ -160,22 +172,24 @@ const LiveChatSidebar = ({ isOpen, setIsOpen }) => {
     }
   }, [isOpen, getUserLanguage, isLanguageManuallySet]);
 
-  // Re-translate existing messages when 'to' language changes
-  useEffect(() => {
-    if (chatMessages.length > 0) {
-      chatMessages.forEach((msg) => {
-        if (msg.type === "message" && msg.clientId !== clientId.current) {
-          // Update translation for others' messages
-          translateMessage(msg.originalText, msg.clientId, msg.from, to, msg.roomId, msg.timestamp, false);
-        }
-      });
+  // Handle errors
+  const handleError = useCallback((message, persistent = false) => {
+    setError(message);
+    if (!persistent) {
+      setTimeout(() => setError(""), 5000);
     }
-  }, [to, translateMessage, clientId]);
+    console.error("Error:", message);
+  }, []);
 
   // Initialize and manage WebSocket connection
   const connectWebSocket = useCallback(() => {
     if (socket && socket.readyState === WebSocket.OPEN) {
       console.log("WebSocket already connected");
+      return;
+    }
+
+    if (reconnectAttempts.current >= maxReconnectAttempts) {
+      handleError("Max reconnect attempts reached. Please refresh the page.", true);
       return;
     }
 
@@ -195,7 +209,7 @@ const LiveChatSidebar = ({ isOpen, setIsOpen }) => {
       if (reconnectAttempts.current < maxReconnectAttempts) {
         const delay = reconnectInterval.current;
         console.log(`Attempting to reconnect in ${delay}ms... (Attempt ${reconnectAttempts.current + 1})`);
-        setTimeout(() => {
+        reconnectTimeoutRef.current = setTimeout(() => {
           reconnectAttempts.current += 1;
           reconnectInterval.current *= 2;
           connectWebSocket();
@@ -222,24 +236,26 @@ const LiveChatSidebar = ({ isOpen, setIsOpen }) => {
     };
 
     setSocket(newSocket);
-  }, [socket]);
+  }, [handleError]);
 
-  // Connect WebSocket when sidebar is open
+  // Initialize WebSocket connection when component mounts
   useEffect(() => {
-    if (isOpen && !socket) {
-      console.log("Sidebar opened, initiating WebSocket connection");
-      connectWebSocket();
-    }
+    connectWebSocket();
 
+    // Cleanup on component unmount
     return () => {
       if (socket && socket.readyState === WebSocket.OPEN) {
         console.log("Closing WebSocket on component unmount");
-        socket.close(1000, "Component unmount");
-        setSocket(null);
-        setIsConnected(false);
+        socket.close(1000, "Component unmounted");
       }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+      setSocket(null);
+      setIsConnected(false);
     };
-  }, [isOpen, connectWebSocket, socket]);
+  }, [connectWebSocket]);
 
   // Scroll chat container to the bottom
   useEffect(() => {
@@ -275,8 +291,16 @@ const LiveChatSidebar = ({ isOpen, setIsOpen }) => {
         addSystemMessage(`A user left`);
         break;
       case "message":
-        // Translate incoming messages to user's preferred 'to' language
-        translateMessage(data.content, data.clientId, data.from || "en", to, data.roomId, data.timestamp, data.clientId === clientId.current);
+        // Translate incoming messages to user's preferred 'to' language or fallback to detected language
+        translateMessage(
+          data.content,
+          data.clientId,
+          data.from || "en",
+          to || detectedLanguage,
+          data.roomId,
+          data.timestamp,
+          data.clientId === clientId.current
+        );
         break;
       case "error":
         console.log("Server error:", data.message);
@@ -303,15 +327,6 @@ const LiveChatSidebar = ({ isOpen, setIsOpen }) => {
       ...prev,
       { type: "system", text, timestamp: Date.now() },
     ]);
-  };
-
-  // Handle errors
-  const handleError = (message, persistent = false) => {
-    setError(message);
-    if (!persistent) {
-      setTimeout(() => setError(""), 5000);
-    }
-    console.error("Error:", message);
   };
 
   // Create a new chat room
@@ -372,7 +387,7 @@ const LiveChatSidebar = ({ isOpen, setIsOpen }) => {
       timestamp: Date.now(),
     };
     socket.send(JSON.stringify(message));
-    // Add the sender's message directly to chatMessages without translation
+    // spekars message directly to chatMessages without translation
     setChatMessages((prev) => [
       ...prev,
       {
@@ -447,6 +462,27 @@ const LiveChatSidebar = ({ isOpen, setIsOpen }) => {
     setIsLanguageManuallySet(true);
   };
 
+  // Handle textarea key down to send message on Enter
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault(); // Prevent default Enter behavior (new line)
+      handleSendMessage();
+    }
+  };
+
+  // Handle microphone toggle with error handling
+  const handleMicrophoneToggle = () => {
+    try {
+      if (isListening) {
+        stopSpeechRecognition();
+      } else {
+        startSpeechRecognition();
+      }
+    } catch (err) {
+      setSpeechError(err.message || "Failed to toggle microphone");
+    }
+  };
+
   return (
     <div
       ref={sidebarRef}
@@ -481,9 +517,11 @@ const LiveChatSidebar = ({ isOpen, setIsOpen }) => {
       </div>
 
       {/* Error Display */}
-      {(error || speechError || geoError) && (
-        <div className="text-red-500 text-sm mb-2">{error || speechError || geoError}</div>
-      )}
+      <div className="text-red-500 text-sm mb-2">
+        {error && <div>{error}</div>}
+        {speechError && <div>{speechError}</div>}
+        {geoError && <div>{geoError}</div>}
+      </div>
 
       <div className="flex border rounded-md pb-4 bg-slate-100 flex-col h-[calc(100%-8rem)]">
         {!currentRoomId ? (
@@ -544,7 +582,7 @@ const LiveChatSidebar = ({ isOpen, setIsOpen }) => {
           </div>
         ) : (
           <>
-            <div className="p-2 bg-gray-100 rounded-t-md flex justify-between items-center">
+            <div className="p-2 bg-gray-100 pb-4 rounded-t-md flex justify-between items-center">
               <p className="text-sm text-gray-600">Room ID: {currentRoomId}</p>
               <button
                 onClick={leaveRoom}
@@ -566,7 +604,7 @@ const LiveChatSidebar = ({ isOpen, setIsOpen }) => {
                   const isMyMessage = msg.type === "message" && msg.clientId === clientId.current;
                   return (
                     <div
-                      key={msg.id}
+                      key={msg.timestamp} // Use timestamp as key for both system and user messages
                       className={`flex ${isMyMessage ? "justify-end" : "justify-start"}`}
                     >
                       <div className="max-w-[80%]">
@@ -583,7 +621,7 @@ const LiveChatSidebar = ({ isOpen, setIsOpen }) => {
                                     handleLanguageChange(msg.id, e.target.value, null);
                                     handleManualFromChange(e);
                                   }}
-                                  className="w-full p-1 border rounded-lg focus:outline-none text-xs"
+                                  className="w-full max-w-[150px] p-1 border rounded-lg focus:outline-none text-xs"
                                 >
                                   {languages.map((lang) => (
                                     <option key={lang.code} value={lang.code}>
@@ -599,7 +637,7 @@ const LiveChatSidebar = ({ isOpen, setIsOpen }) => {
                                     handleLanguageChange(msg.id, null, e.target.value);
                                     handleManualToChange(e);
                                   }}
-                                  className="w-full p-1 border rounded-lg focus:outline-none text-xs"
+                                  className="w-full max-w-[150px] p-1 border rounded-lg focus:outline-none text-xs"
                                 >
                                   {languages.map((lang) => (
                                     <option key={lang.code} value={lang.code}>
@@ -627,18 +665,39 @@ const LiveChatSidebar = ({ isOpen, setIsOpen }) => {
               )}
             </div>
             <div className="p-2 border-t">
-              <div className="flex gap-2">
-                <input
-                  type="text"
+              <div className="flex items-start gap-2">
+                <textarea
+                  ref={textareaRef}
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-800 resize-none"
                   placeholder="Type your message..."
-                  className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-800"
-                  onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+                  style={{ height: inputHeight, overflowWrap: "break-word", whiteSpace: "pre-wrap" }}
                   aria-label="Chat input"
                 />
+                {chatInput && (
+                  <button
+                    onClick={() => setChatInput("")}
+                    className="text-gray-500 hover:text-gray-900 mt-2"
+                    aria-label="Clear input"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth="1.5"
+                      stroke="currentColor"
+                      className="w-6 h-6"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              <div className="flex justify-between mt-2">
                 <button
-                  onClick={() => (isListening ? stopSpeechRecognition() : startSpeechRecognition())}
+                  onClick={handleMicrophoneToggle}
                   className={`p-2 rounded-lg text-white ${
                     isListening ? "bg-red-600 hover:bg-red-700" : "bg-purple-800 hover:bg-purple-900"
                   }`}

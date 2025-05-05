@@ -21,7 +21,6 @@ const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
 const languages = [
   { code: "as", name: "Assamese" },
   { code: "bn", name: "Bengali" },
-  { code: "brx", name: "Bodo" },
   { code: "en", name: "English" },
   { code: "gbm", name: "Garhwali" },
   { code: "gu", name: "Gujarati" },

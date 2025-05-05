@@ -6,7 +6,6 @@ import { useState , useCallback } from "react";
 const languages = [
     { code: "as", name: "Assamese" },
     { code: "bn", name: "Bengali" },
-    { code: "brx", name: "Bodo" },
     { code: "en", name: "English" },
     { code: "gbm", name: "Garhwali" },
     { code: "gu", name: "Gujarati" },
