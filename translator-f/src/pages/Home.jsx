@@ -1245,7 +1245,7 @@ const Translator = () => {
   );
 
   return (
-    <div className="flex flex-col md:mt-4 justify-center p-4">
+    <div className="flex flex-col md:mt-4 mb-12 justify-center p-4">
       <div className="card p-4 bg-white rounded-2xl shadow-2xl mb-6">
         <div className="flex flex-col sm:flex-row justify-between gap-4">
           <LanguageSelector
