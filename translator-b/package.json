@@ -3,16 +3,17 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-  "start": "node src/index.js & node src/socket.js",
-  "websocket":"node src/socket.js"
-}
-,
+    "start": "node src/index.js & node src/socket.js",
+    "websocket": "node src/socket.js"
+  },
   "keywords": [],
   "type": "commonjs",
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@google-cloud/translate": "^9.0.1",
+    "@google/generative-ai": "^0.24.1",
     "axios": "^1.9.0",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
