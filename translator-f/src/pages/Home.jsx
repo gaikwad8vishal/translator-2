@@ -793,7 +793,7 @@ const HistorySidebar = ({ isOpen, setIsOpen, history, setHistory }) => {
       style={{ maxHeight: "100vh", overflowY: "auto", overflowX: "hidden" }}
       aria-label="Translation history"
     >
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between border p-1 rounded px-2 items-center mb-4">
         <h2 className="text-xl font-semibold text-purple-800">History</h2>
         <button
           className="text-gray-600 p-1 rounded hover:bg-gray-300"
@@ -1313,24 +1313,24 @@ const Translator = () => {
         }}
       />
 
-      <div className="fixed bottom-0 left-0 w-full bg-white shadow-lg flex justify-around items-center py-3 md:flex md:gap-4 md:bottom-4 md:justify-center border md:bg-transparent md:shadow-none" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+      <div className="fixed bottom-0 left-0 w-full bg-slate-100 shadow-lg flex justify-around items-center py-3 md:flex md:gap-4 md:bottom-4 md:justify-center border md:bg-transparent md:shadow-none" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
         <button
           onClick={handleChatClick}
-          className="p-3 rounded-full bg-purple-800 text-white md:shadow-lg"
+          className="p-3 rounded-full bg-transparent text-gray-600 md:shadow-lg"
           aria-label={isChatOpen ? "Close chat" : "Open chat"}
         >
           {isChatOpen ? <X size={24} className="md:size-6" /> : <MessageSquare size={24} className="md:size-6" />}
         </button>
         <button
           onClick={handleLiveChatClick}
-          className="p-3 rounded-full bg-purple-800 text-white md:shadow-lg"
+          className="p-3 rounded-full bg-transparent text-gray-600 md:shadow-lg"
           aria-label={isLiveChatOpen ? "Close live chat" : "Open live chat"}
         >
           {isLiveChatOpen ? <X size={24} className="md:size-6" /> : <Users size={24} className="md:size-6" />}
         </button>
         <button
           onClick={handleHistoryClick}
-          className="p-3 rounded-full bg-purple-800 text-white md:shadow-lg"
+          className="p-3 rounded-full bg-transparent text-gray-600 md:shadow-lg"
           aria-label={isHistoryOpen ? "Close history" : "View history"}
         >
           {isHistoryOpen ? <X size={24} className="md:size-6" /> : <FaHistory size={24} className="md:size-6" />}
