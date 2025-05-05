@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-  "start": "node src/index.js & node src/socket.js"
+  "start": "node src/index.js & node src/socket.js",
+  "websocket":"node src/socket.js"
 }
 ,
   "keywords": [],
