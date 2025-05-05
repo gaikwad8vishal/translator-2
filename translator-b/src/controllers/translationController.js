@@ -69,6 +69,13 @@ exports.translateText = async (req, res) => {
     res.json({ translatedText });
   } catch (error) {
     const errorMessage = error.message || "Translation failed";
+    if (error.status === 429) {
+      return res
+        .status(429)
+        .json({
+          error: "Too Many Requests: Rate limit exceeded. Try again later."
+        });
+    }
     res.status(500).json({ error: errorMessage });
   }
 };
