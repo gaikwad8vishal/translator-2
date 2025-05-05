@@ -45,7 +45,7 @@ const LiveChatSidebar = ({ isOpen, setIsOpen }) => {
   const [error, setError] = useState("");
   const [isConnected, setIsConnected] = useState(false);
   const [from, setFrom] = useState("en"); // User's input language
-  const [to, setTo] = useState("mr"); // User's preferred display language
+  const [to, setTo] = useState("hi"); // User's preferred display language
   const [detectedLanguage, setDetectedLanguage] = useState("hi"); // Detected language from geolocation
   const [isLanguageManuallySet, setIsLanguageManuallySet] = useState(false); // Track manual language selection
   const chatContainerRef = useRef(null);
@@ -63,8 +63,7 @@ const LiveChatSidebar = ({ isOpen, setIsOpen }) => {
   const { getUserLanguage, error: geoError, setError: setGeoError } = useGeolocation(
     (lang) => {
       if (!isLanguageManuallySet) {
-        setFrom(lang);
-        setTo(lang);
+        setFrom(lang); // Only update 'from' language
         setDetectedLanguage(lang);
       }
     },
@@ -154,7 +153,7 @@ const LiveChatSidebar = ({ isOpen, setIsOpen }) => {
     []
   );
 
-  // Call getUserLanguage when sidebar opens, but only if language hasn't been manually set
+  // Call getUserLanguage when sidebar opens, but only for 'from' and 'detectedLanguage'
   useEffect(() => {
     if (isOpen && !isLanguageManuallySet) {
       getUserLanguage();
@@ -171,7 +170,7 @@ const LiveChatSidebar = ({ isOpen, setIsOpen }) => {
         }
       });
     }
-  }, [to, translateMessage, clientId]); // Removed chatMessages from dependencies
+  }, [to, translateMessage, clientId]);
 
   // Initialize and manage WebSocket connection
   const connectWebSocket = useCallback(() => {
@@ -451,7 +450,7 @@ const LiveChatSidebar = ({ isOpen, setIsOpen }) => {
   return (
     <div
       ref={sidebarRef}
-      className={`fixed top-0 z-50 w-96  right-0 h-full bg-white shadow-lg transform transition-transform duration-300 p-4 ${
+      className={`fixed top-0 z-50 w-96 right-0 h-full bg-white shadow-lg transform transition-transform duration-300 p-4 ${
         isOpen ? "translate-x-0" : "translate-x-full"
       }`}
       style={{ maxHeight: "100vh", overflowY: "auto", overflowX: "hidden" }}
@@ -485,8 +484,6 @@ const LiveChatSidebar = ({ isOpen, setIsOpen }) => {
       {(error || speechError || geoError) && (
         <div className="text-red-500 text-sm mb-2">{error || speechError || geoError}</div>
       )}
-
-      
 
       <div className="flex border rounded-md pb-4 bg-slate-100 flex-col h-[calc(100%-8rem)]">
         {!currentRoomId ? (
@@ -582,7 +579,10 @@ const LiveChatSidebar = ({ isOpen, setIsOpen }) => {
                                 <select
                                   id={`from-${msg.id}`}
                                   value={msg.from}
-                                  onChange={(e) => handleLanguageChange(msg.id, e.target.value, null)}
+                                  onChange={(e) => {
+                                    handleLanguageChange(msg.id, e.target.value, null);
+                                    handleManualFromChange(e);
+                                  }}
                                   className="w-full p-1 border rounded-lg focus:outline-none text-xs"
                                 >
                                   {languages.map((lang) => (
@@ -595,7 +595,10 @@ const LiveChatSidebar = ({ isOpen, setIsOpen }) => {
                                 <select
                                   id={`to-${msg.id}`}
                                   value={msg.to}
-                                  onChange={(e) => handleLanguageChange(msg.id, null, e.target.value)}
+                                  onChange={(e) => {
+                                    handleLanguageChange(msg.id, null, e.target.value);
+                                    handleManualToChange(e);
+                                  }}
                                   className="w-full p-1 border rounded-lg focus:outline-none text-xs"
                                 >
                                   {languages.map((lang) => (
