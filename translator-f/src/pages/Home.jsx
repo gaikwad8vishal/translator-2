@@ -100,7 +100,6 @@ export const useSpeech = (lang, onResult) => {
   const [availableVoices, setAvailableVoices] = useState([]);
   const recognitionRef = useRef(null);
 
-  // Load available voices for speech synthesis
   useEffect(() => {
     const updateVoices = () => {
       const voices = window.speechSynthesis.getVoices();
@@ -113,7 +112,6 @@ export const useSpeech = (lang, onResult) => {
     };
   }, []);
 
-  // Start speech recognition
   const startSpeechRecognition = useCallback(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -122,7 +120,6 @@ export const useSpeech = (lang, onResult) => {
       return;
     }
 
-    // Prevent multiple recognition instances
     if (isListening) {
       return;
     }
@@ -130,13 +127,13 @@ export const useSpeech = (lang, onResult) => {
     const recognition = new SpeechRecognition();
     recognitionRef.current = recognition;
     recognition.lang = lang === "auto" ? "en-US" : `${lang}-${lang.toUpperCase()}`;
-    recognition.interimResults = false; // Disable interim results to avoid partial repeats
-    recognition.continuous = false; // Disable continuous mode to avoid multiple triggers
+    recognition.interimResults = false;
+    recognition.continuous = false;
 
     recognition.onresult = (event) => {
-      const finalTranscript = event.results[0][0].transcript; // Process only final result
+      const finalTranscript = event.results[0][0].transcript;
       onResult(finalTranscript);
-      recognition.stop(); // Stop recognition after final result
+      recognition.stop();
     };
 
     recognition.onerror = (event) => {
@@ -170,7 +167,6 @@ export const useSpeech = (lang, onResult) => {
     setIsListening(true);
   }, [lang, onResult, isListening]);
 
-  // Stop speech recognition
   const stopSpeechRecognition = useCallback(() => {
     if (recognitionRef.current) {
       recognitionRef.current.stop();
@@ -178,7 +174,6 @@ export const useSpeech = (lang, onResult) => {
     }
   }, []);
 
-  // Speak text using speech synthesis
   const speakText = useCallback(
     (textToSpeak, lang) => {
       if (!window.speechSynthesis) {
@@ -187,7 +182,6 @@ export const useSpeech = (lang, onResult) => {
         return;
       }
 
-      // Stop any ongoing speech and recognition to prevent overlap/feedback
       window.speechSynthesis.cancel();
       stopSpeechRecognition();
 
@@ -197,7 +191,6 @@ export const useSpeech = (lang, onResult) => {
         return;
       }
 
-      // Prevent multiple speak calls while speaking
       if (isSpeaking) {
         return;
       }
@@ -235,7 +228,6 @@ export const useSpeech = (lang, onResult) => {
       const speechLang = langMap[lang] || "en-US";
       utterance.lang = speechLang;
 
-      // Select matching voice or fallback to en-US
       const matchingVoice =
         availableVoices.find((voice) => voice.lang === speechLang) ||
         availableVoices.find((voice) => voice.lang === "en-US");
@@ -261,7 +253,6 @@ export const useSpeech = (lang, onResult) => {
     [availableVoices, isSpeaking, stopSpeechRecognition]
   );
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (recognitionRef.current) {
@@ -293,8 +284,8 @@ const useCamera = () => {
   const checkAvailableCameras = async () => {
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = devices.filter(device => device.kind === 'videoinput');
-      console.log('Available cameras:', videoDevices);
+      const videoDevices = devices.filter((device) => device.kind === "videoinput");
+      console.log("Available cameras:", videoDevices);
       if (videoDevices.length === 0) {
         setError("No cameras found on this device.");
         setTimeout(() => setError(""), 3000);
@@ -302,7 +293,9 @@ const useCamera = () => {
       }
       return true;
     } catch (err) {
-      console.error('Error enumerating devices:', err);
+      console.error("Error enumerating devices:", err);
+      setError("Failed to enumerate camera devices.");
+      setTimeout(() => setError(""), 3000);
       return false;
     }
   };
@@ -318,31 +311,42 @@ const useCamera = () => {
     if (!hasCameras) return false;
 
     try {
-      const permissionStatus = await navigator.permissions.query({ name: 'camera' });
-      if (permissionStatus.state === 'denied') {
-        setError("Camera access denied. Please enable camera permissions in your browser settings.");
-        setTimeout(() => setError(""), 5000);
-        return false;
-      }
-
+      // Stop any existing stream
       if (stream) {
         stream.getTracks().forEach((track) => track.stop());
+        setStream(null);
       }
 
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode },
-      });
+      // Define constraints with fallback for mobile compatibility
+      const constraints = {
+        video: {
+          facingMode: facingMode,
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+      };
+
+      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+      if (!mediaStream.getVideoTracks().length) {
+        throw new Error("No video tracks available in the stream.");
+      }
+
       setStream(mediaStream);
       return true;
     } catch (error) {
+      console.error("Camera start error:", error);
       let errorMessage = "Failed to access camera.";
       if (error.name === "NotAllowedError") {
-        errorMessage = "Camera access denied. Please allow camera permissions.";
+        errorMessage = "Camera access denied. Please allow camera permissions in your browser settings.";
       } else if (error.name === "NotFoundError") {
         errorMessage = "No camera found on this device.";
+      } else if (error.name === "NotReadableError") {
+        errorMessage = "Camera is in use by another application or unavailable.";
+      } else {
+        errorMessage = `Camera error: ${error.message}`;
       }
       setError(errorMessage);
-      setTimeout(() => setError(""), 3000);
+      setTimeout(() => setError(""), 5000);
       return false;
     }
   }, [facingMode, stream]);
@@ -360,26 +364,40 @@ const useCamera = () => {
     try {
       if (stream) {
         stream.getTracks().forEach((track) => track.stop());
+        setStream(null);
       }
 
-      let mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: newFacingMode },
-      }).catch(async (err) => {
+      const constraints = {
+        video: {
+          facingMode: newFacingMode,
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+      };
+
+      let mediaStream = await navigator.mediaDevices.getUserMedia(constraints).catch(async (err) => {
         console.warn(`Failed to get ${newFacingMode} camera:`, err);
         return await navigator.mediaDevices.getUserMedia({ video: true });
       });
 
+      if (!mediaStream.getVideoTracks().length) {
+        throw new Error("No video tracks available in the stream.");
+      }
+
       setStream(mediaStream);
     } catch (error) {
+      console.error("Toggle camera error:", error);
       let errorMessage = "Failed to switch camera.";
       if (error.name === "NotAllowedError") {
         errorMessage = "Camera access denied. Please allow camera permissions.";
       } else if (error.name === "NotFoundError") {
         errorMessage = "Requested camera not found on this device.";
+      } else {
+        errorMessage = `Camera switch error: ${error.message}`;
       }
       setError(errorMessage);
-      setTimeout(() => setError(""), 3000);
-      setFacingMode(facingMode);
+      setTimeout(() => setError(""), 5000);
+      setFacingMode(facingMode); // Revert to previous facingMode on error
     }
   }, [facingMode, stream]);
 
@@ -394,7 +412,7 @@ const useCamera = () => {
       const canvas = canvasRef.current;
       const video = videoRef.current;
 
-      canvas.width = video.videoWidth / 2; // Reduce resolution
+      canvas.width = video.videoWidth / 2;
       canvas.height = video.videoHeight / 2;
       const ctx = canvas.getContext("2d");
       if (!ctx) throw new Error("Unable to get canvas context");
@@ -426,7 +444,7 @@ const useCamera = () => {
 
       return extractedText;
     } catch (error) {
-      console.error('Capture error:', error);
+      console.error("Capture error:", error);
       setError(`Error: ${error.message || "Failed to process image"}`);
       setTimeout(() => setError(""), 3000);
       return null;
@@ -435,8 +453,14 @@ const useCamera = () => {
 
   const stopCamera = useCallback(() => {
     if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
+      stream.getTracks().forEach((track) => {
+        track.stop();
+        track.enabled = false; // Explicitly disable track
+      });
       setStream(null);
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
     }
   }, [stream]);
 
@@ -444,9 +468,7 @@ const useCamera = () => {
     if (stream && videoRef.current) {
       videoRef.current.srcObject = stream;
       videoRef.current.play().catch((error) => {
-        console.error('Video play error:', error);
-        setError("Failed to play video stream. Please ensure camera permissions are granted.");
-        setTimeout(() => setError(""), 3000);
+        setTimeout(() => setError(""), 10000);
       });
     }
   }, [stream]);
@@ -465,7 +487,7 @@ const ErrorMessage = ({ error, onClose, onRetry }) => {
   return (
     <div className="text-red-500 text-center mb-4 p-3 rounded-lg flex justify-between items-center">
       <p>
-        {error} {error.includes("unavailable") && "This may be due to a weak signal."}
+        {error} {error.includes("unavailable") && "This may be due to a weak signal or another app using the camera."}
       </p>
       <div className="flex gap-2">
         {onRetry && (
@@ -516,16 +538,14 @@ const TextInput = ({
     }
   }, [value]);
 
-  // Wrapper for onPhotoUpload to close the menu
   const handlePhotoUploadWrapper = (event) => {
-    onPhotoUpload(event, setIsUploadMenuOpen); // Pass setIsUploadMenuOpen
-    setIsUploadMenuOpen(false); // Close menu immediately after selecting a file
+    onPhotoUpload(event, setIsUploadMenuOpen);
+    setIsUploadMenuOpen(false);
   };
 
-  // Wrapper for onDocumentUpload to close the menu
   const handleDocumentUploadWrapper = (event) => {
     onDocumentUpload(event);
-    setIsUploadMenuOpen(false); // Close menu immediately after selecting a file
+    setIsUploadMenuOpen(false);
   };
 
   return (
@@ -587,7 +607,7 @@ const TextInput = ({
               <button
                 onClick={() => {
                   onCameraOpen();
-                  setIsUploadMenuOpen(false); // Close menu when camera is opened
+                  setIsUploadMenuOpen(false);
                 }}
                 className="flex items-center gap-2 p-2 hover:bg-gray-100 w-full text-left"
                 aria-label="Open camera"
@@ -699,6 +719,7 @@ const CameraModal = ({ isOpen, onClose, onCapture }) => {
   const { stream, startCamera, stopCamera, toggleCameraFacing, captureAndProcessImage, videoRef, canvasRef, error, setError } =
     useCamera();
   const [loading, setLoading] = useState(false);
+  const containerRef = useRef(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -718,18 +739,58 @@ const CameraModal = ({ isOpen, onClose, onCapture }) => {
     setLoading(false);
   }, [captureAndProcessImage, onCapture, onClose]);
 
+  useEffect(() => {
+    const handleResize = () => {
+      if (videoRef.current && containerRef.current) {
+        const container = containerRef.current;
+        const video = videoRef.current;
+        const containerAspect = container.offsetWidth / container.offsetHeight;
+        const videoAspect = video.videoWidth / video.videoHeight || 1;
+
+        if (containerAspect > videoAspect) {
+          video.style.width = "100%";
+          video.style.height = "auto";
+        } else {
+          video.style.width = "auto";
+          video.style.height = "100%";
+        }
+      }
+    };
+
+    if (isOpen && stream) {
+      window.addEventListener("resize", handleResize);
+      window.addEventListener("orientationchange", handleResize);
+      handleResize();
+    }
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("orientationchange", handleResize);
+    };
+  }, [isOpen, stream, videoRef]);
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div className="bg-white p-4 rounded-lg max-w-md w-full sm:min-h-[300px] sm:max-h-[50vh] min-h-[450px] max-h-[70vh] flex flex-col">
-        <ErrorMessage error={error} onClose={() => setError("")} />
-        <div className="relative w-full flex-1 overflow-hidden rounded-lg">
+        <ErrorMessage
+          error={error}
+          onClose={() => setError("")}
+          onRetry={startCamera}
+        />
+        <div
+          ref={containerRef}
+          className="relative w-full flex-1 overflow-hidden rounded-lg bg-black"
+          style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}
+        >
           <video
             ref={videoRef}
             autoPlay
             playsInline
-            className="w-full h-full object-contain rounded-lg"
+            muted
+            className="max-w-full max-h-full object-contain rounded-lg"
+            style={{ position: "absolute", top: 0, left: 0, transform: "translate(0, 0)" }}
             aria-label="Camera preview"
           />
           <canvas ref={canvasRef} className="hidden" />
@@ -737,20 +798,21 @@ const CameraModal = ({ isOpen, onClose, onCapture }) => {
         <div className="flex justify-between items-center mt-4 gap-2">
           <button
             onClick={toggleCameraFacing}
-            className="flex-1 px-2 py-2 text-black active:scale-150 transition-transform duration-150 rounded-lg flex items-center justify-center"
+            className="flex-1 px-2 py-2 text-black active:scale-105 transition-transform duration-150 rounded-lg flex items-center justify-center hover:bg-gray-100"
             aria-label="Toggle camera facing"
           >
             <FaSyncAlt className="inline-block mr-2" />
+            Switch
           </button>
           <button
             onClick={handleCapture}
-            className={`w-16 h-16 rounded-full bg-white border border-gray-300 flex items-center justify-center disabled:opacity-50 hover:bg-gray-100 active:scale-105 transition-transform duration-150 ${
-              loading ? "animate-spin-border" : ""
+            className={`w-16 h-16 rounded-full bg-white border border-gray-300 flex items-center justify-center disabled:opacity-50 hover:bg-gray-100 active:scale-95 transition-transform duration-150 ${
+              loading ? "animate-pulse" : ""
             }`}
             disabled={loading}
             aria-label="Capture image"
           >
-            <div className="w-8 h-8 bg-black rounded-sm"></div>
+            <div className="w-10 h-10 bg-black rounded-full"></div>
           </button>
           <button
             onClick={onClose}
@@ -759,14 +821,15 @@ const CameraModal = ({ isOpen, onClose, onCapture }) => {
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="w-8 h-8 text-red-500 transition-transform duration-200 group-hover:rotate-90"
+              className="w-6 h-6 text-red-500 transition-transform duration-200 group-hover:rotate-90"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
-              strokeWidth={4}
+              strokeWidth={2}
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
+            Close
           </button>
         </div>
       </div>
@@ -903,6 +966,7 @@ const HistorySidebar = ({ isOpen, setIsOpen, history, setHistory }) => {
   );
 };
 
+// Component: Chat sidebar
 const ChatSidebar = ({ isOpen, setIsOpen }) => {
   const [chatHistory, setChatHistory] = useState([]);
   const [chatInput, setChatInput] = useState("");
@@ -1058,7 +1122,6 @@ const ChatSidebar = ({ isOpen, setIsOpen }) => {
         </button>
       </div>
 
-      {/* Error Display */}
       {(geoError || speechError) && (
         <div className="text-red-500 text-sm mb-2">{geoError || speechError}</div>
       )}
@@ -1127,7 +1190,6 @@ const ChatSidebar = ({ isOpen, setIsOpen }) => {
           )}
         </div>
 
-        {/* Language Selection and Input */}
         <div className="p-2 border-t">
           <div className="flex gap-2">
             <input
@@ -1243,7 +1305,7 @@ const Translator = () => {
         if (extractedText) {
           setText(extractedText);
           await translateText(extractedText, from, to);
-          setIsUploadMenuOpen(false); // Close menu on successful scan
+          setIsUploadMenuOpen(false);
         } else {
           setTranslationError("No text detected in the image.");
           setTimeout(() => setTranslationError(""), 3000);
