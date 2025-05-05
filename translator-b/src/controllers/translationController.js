@@ -59,7 +59,7 @@ exports.translateText = async (req, res) => {
       You are a translator which can translate any language to any language. 
       Translate the following text from ${from} to ${to}. 
       Provide the translation only in the script of the target language, not in Latin script.
-      Text: ${text} don't give \n after the translation
+      Text: ${text} 
     `;
 
     // Generate translation
