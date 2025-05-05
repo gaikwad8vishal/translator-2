@@ -12,7 +12,7 @@ import { LanguageSelector } from "../components/LanguageSelector";
 import { useGeolocation } from "../components/languagebylocation";
 import LiveChatSidebar from "../components/LiveChatbar";
 
-const backendURL = import.meta.env.VITE_BACKEND_URL || "https://translator-2-1.onrender.com";
+const backendURL = "https://translator-2-1.onrender.com";
 
 // Available languages for translation
 const languages = [
@@ -845,7 +845,7 @@ const HistorySidebar = ({ isOpen, setIsOpen, history, setHistory }) => {
     try {
       const token = localStorage.getItem("token");
       if (!token) return;
-      const response = await axios.get(`${backendURL}/history/all`, {
+      const response = await axios.get(`https://translator-2-1.onrender.com/history/all`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setHistory(response.data);
