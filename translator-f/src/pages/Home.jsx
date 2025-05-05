@@ -1,3 +1,4 @@
+
 import axios from "axios";
 import { ArrowLeftRight, Home, Languages, Mic, MicOff, Users, Volume2, X } from "lucide-react";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
@@ -10,12 +11,8 @@ import { MessageSquare } from "lucide-react";
 import { LanguageSelector } from "../components/LanguageSelector";
 import { useGeolocation } from "../components/languagebylocation";
 import LiveChatSidebar from "../components/LiveChatbar";
-  
-
 
 const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
-
-
 
 // Available languages for translation
 const languages = [
@@ -43,7 +40,7 @@ const languages = [
 ];
 
 // Hook: Handle translation API calls and history
-export  const useTranslation = () => {
+export const useTranslation = () => {
   const [translatedText, setTranslatedText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -94,7 +91,6 @@ export  const useTranslation = () => {
 
   return { translatedText, loading, error, setError, history, setHistory, translateText };
 };
-
 
 // Hook: Handle speech recognition and text-to-speech
 export const useSpeech = (lang, onResult) => {
@@ -286,7 +282,6 @@ export const useSpeech = (lang, onResult) => {
   };
 };
 
-
 // Hook: Handle camera stream and OCR
 const useCamera = () => {
   const [stream, setStream] = useState(null);
@@ -295,6 +290,23 @@ const useCamera = () => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
+  const checkAvailableCameras = async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      console.log('Available cameras:', videoDevices);
+      if (videoDevices.length === 0) {
+        setError("No cameras found on this device.");
+        setTimeout(() => setError(""), 3000);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error('Error enumerating devices:', err);
+      return false;
+    }
+  };
+
   const startCamera = useCallback(async () => {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       setError("Camera access is not supported in your browser.");
@@ -302,7 +314,17 @@ const useCamera = () => {
       return false;
     }
 
+    const hasCameras = await checkAvailableCameras();
+    if (!hasCameras) return false;
+
     try {
+      const permissionStatus = await navigator.permissions.query({ name: 'camera' });
+      if (permissionStatus.state === 'denied') {
+        setError("Camera access denied. Please enable camera permissions in your browser settings.");
+        setTimeout(() => setError(""), 5000);
+        return false;
+      }
+
       if (stream) {
         stream.getTracks().forEach((track) => track.stop());
       }
@@ -340,9 +362,13 @@ const useCamera = () => {
         stream.getTracks().forEach((track) => track.stop());
       }
 
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
+      let mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: newFacingMode },
+      }).catch(async (err) => {
+        console.warn(`Failed to get ${newFacingMode} camera:`, err);
+        return await navigator.mediaDevices.getUserMedia({ video: true });
       });
+
       setStream(mediaStream);
     } catch (error) {
       let errorMessage = "Failed to switch camera.";
@@ -358,8 +384,8 @@ const useCamera = () => {
   }, [facingMode, stream]);
 
   const captureAndProcessImage = useCallback(async () => {
-    if (!canvasRef.current || !videoRef.current) {
-      setError("Camera stream not available. Please reopen the camera.");
+    if (!canvasRef.current || !videoRef.current || videoRef.current.readyState !== 4) {
+      setError("Camera stream not ready. Please wait or reopen the camera.");
       setTimeout(() => setError(""), 3000);
       return null;
     }
@@ -368,17 +394,17 @@ const useCamera = () => {
       const canvas = canvasRef.current;
       const video = videoRef.current;
 
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      canvas.width = video.videoWidth / 2; // Reduce resolution
+      canvas.height = video.videoHeight / 2;
       const ctx = canvas.getContext("2d");
       if (!ctx) throw new Error("Unable to get canvas context");
 
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const dataUrl = canvas.toDataURL("image/png");
 
-      const result = await Tesseract.recognize(dataUrl, "eng", {
-        logger: (m) => console.log("Tesseract Logger:", m),
-      });
+      const worker = await Tesseract.createWorker("eng");
+      const result = await worker.recognize(dataUrl);
+      await worker.terminate();
 
       if (result.data.confidence < 50) {
         setError("Text detection confidence too low. Please try a clearer image.");
@@ -400,6 +426,7 @@ const useCamera = () => {
 
       return extractedText;
     } catch (error) {
+      console.error('Capture error:', error);
       setError(`Error: ${error.message || "Failed to process image"}`);
       setTimeout(() => setError(""), 3000);
       return null;
@@ -417,6 +444,7 @@ const useCamera = () => {
     if (stream && videoRef.current) {
       videoRef.current.srcObject = stream;
       videoRef.current.play().catch((error) => {
+        console.error('Video play error:', error);
         setError("Failed to play video stream. Please ensure camera permissions are granted.");
         setTimeout(() => setError(""), 3000);
       });
@@ -429,8 +457,6 @@ const useCamera = () => {
 
   return { stream, startCamera, stopCamera, toggleCameraFacing, captureAndProcessImage, videoRef, canvasRef, error, setError };
 };
-
-
 
 // Component: Error message display
 const ErrorMessage = ({ error, onClose, onRetry }) => {
@@ -490,6 +516,18 @@ const TextInput = ({
     }
   }, [value]);
 
+  // Wrapper for onPhotoUpload to close the menu
+  const handlePhotoUploadWrapper = (event) => {
+    onPhotoUpload(event, setIsUploadMenuOpen); // Pass setIsUploadMenuOpen
+    setIsUploadMenuOpen(false); // Close menu immediately after selecting a file
+  };
+
+  // Wrapper for onDocumentUpload to close the menu
+  const handleDocumentUploadWrapper = (event) => {
+    onDocumentUpload(event);
+    setIsUploadMenuOpen(false); // Close menu immediately after selecting a file
+  };
+
   return (
     <div className="p-4 border rounded-lg min-h-40 relative">
       <div className="flex items-start gap-2">
@@ -547,7 +585,10 @@ const TextInput = ({
           {isUploadMenuOpen && (
             <div className="absolute z-10 bottom-12 right-4 bg-white border rounded-lg shadow-lg p-2">
               <button
-                onClick={onCameraOpen}
+                onClick={() => {
+                  onCameraOpen();
+                  setIsUploadMenuOpen(false); // Close menu when camera is opened
+                }}
                 className="flex items-center gap-2 p-2 hover:bg-gray-100 w-full text-left"
                 aria-label="Open camera"
               >
@@ -558,7 +599,7 @@ const TextInput = ({
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={onPhotoUpload}
+                  onChange={handlePhotoUploadWrapper}
                   className="hidden"
                   aria-label="Upload photo"
                 />
@@ -568,7 +609,7 @@ const TextInput = ({
                 <input
                   type="file"
                   accept=".pdf,.doc,.docx,.txt"
-                  onChange={onDocumentUpload}
+                  onChange={handleDocumentUploadWrapper}
                   className="hidden"
                   aria-label="Upload document"
                 />
@@ -1121,9 +1162,7 @@ const ChatSidebar = ({ isOpen, setIsOpen }) => {
   );
 };
 
-
 // Main Component: Translator
-
 const Translator = () => {
   const [text, setText] = useState("");
   const [from, setFrom] = useState("en");
@@ -1137,7 +1176,7 @@ const Translator = () => {
   const [detectedLanguage, setDetectedLanguage] = useState("hi");
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [isLiveChatOpen, setIsLiveChatOpen] = useState(false); // New state for LiveChatSidebar
+  const [isLiveChatOpen, setIsLiveChatOpen] = useState(false);
 
   const { translatedText, loading, error: translationError, setError: setTranslationError, history, setHistory, translateText } = useTranslation();
   const { isListening, startSpeechRecognition, stopSpeechRecognition, speakText, error: speechError, setError: setSpeechError, isSpeaking } = useSpeech(from, (transcript) => setText((prev) => prev + transcript));
@@ -1169,24 +1208,24 @@ const Translator = () => {
       return;
     }
     setIsChatOpen(false);
-    setIsLiveChatOpen(false); // Close live chat if open
+    setIsLiveChatOpen(false);
     setIsHistoryOpen((prev) => !prev);
   }, []);
 
   const handleChatClick = useCallback(() => {
     setIsHistoryOpen(false);
-    setIsLiveChatOpen(false); // Close live chat if open
+    setIsLiveChatOpen(false);
     setIsChatOpen((prev) => !prev);
   }, []);
 
   const handleLiveChatClick = useCallback(() => {
     setIsHistoryOpen(false);
-    setIsChatOpen(false); // Close static chat if open
+    setIsChatOpen(false);
     setIsLiveChatOpen((prev) => !prev);
   }, []);
 
   const handlePhotoUpload = useCallback(
-    async (event) => {
+    async (event, setIsUploadMenuOpen) => {
       const file = event.target.files[0];
       if (!file) return;
 
@@ -1204,6 +1243,7 @@ const Translator = () => {
         if (extractedText) {
           setText(extractedText);
           await translateText(extractedText, from, to);
+          setIsUploadMenuOpen(false); // Close menu on successful scan
         } else {
           setTranslationError("No text detected in the image.");
           setTimeout(() => setTranslationError(""), 3000);

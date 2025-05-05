@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { IoMdSend } from "react-icons/io";
-import { Mic, MicOff, LogOut } from "lucide-react";
+import { LogOut, Mic, MicOff } from "lucide-react";
 import axios from "axios";
-import useSpeech from "../pages/Home";
 import { useGeolocation } from "../components/languagebylocation";
+import useSpeech from "../pages/Home";
 
 // Use environment variable for WebSocket and Backend URL
 const socketURL = import.meta.env.VITE_WEBSOCKET_URL || "wss://translator-2-2.onrender.com";
@@ -176,7 +176,7 @@ const LiveChatSidebar = ({ isOpen, setIsOpen }) => {
   const handleError = useCallback((message, persistent = false) => {
     setError(message);
     if (!persistent) {
-      setTimeout(() => setError(""), 5000);
+      setTimeout(() => setError(""), 10000);
     }
     console.error("Error:", message);
   }, []);
@@ -387,7 +387,7 @@ const LiveChatSidebar = ({ isOpen, setIsOpen }) => {
       timestamp: Date.now(),
     };
     socket.send(JSON.stringify(message));
-    // spekars message directly to chatMessages without translation
+    // Add the sender's message directly to chatMessages without translation
     setChatMessages((prev) => [
       ...prev,
       {
@@ -523,7 +523,7 @@ const LiveChatSidebar = ({ isOpen, setIsOpen }) => {
         {geoError && <div>{geoError}</div>}
       </div>
 
-      <div className="flex border rounded-md pb-4 bg-slate-100 flex-col h-[calc(100%-8rem)]">
+      <div className="flex border rounded-md bg-slate-100 flex-col h-[calc(100%-4rem)]">
         {!currentRoomId ? (
           <div className="p-4 space-y-4">
             <div className="flex gap-2">
