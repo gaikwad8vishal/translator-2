@@ -12,7 +12,7 @@ import { LanguageSelector } from "../components/LanguageSelector";
 import { useGeolocation } from "../components/languagebylocation";
 import LiveChatSidebar from "../components/LiveChatbar";
 
-const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
+const backendURL =  "http://localhost:3001";
 
 // Available languages for translation
 const languages = [
