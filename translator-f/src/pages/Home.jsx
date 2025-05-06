@@ -138,13 +138,13 @@ const Translator = () => {
     async (event) => {
       const file = event.target.files[0];
       if (!file) return;
-
+  
       setTranslationError("");
       setIsUploading(true); // Start upload loading
-
+  
       try {
         let extractedText = "";
-
+  
         if (file.name.endsWith(".txt")) {
           const reader = new FileReader();
           extractedText = await new Promise((resolve, reject) => {
@@ -176,17 +176,29 @@ const Translator = () => {
           throw new Error(
             "The .doc format is not supported. Please convert your file to .docx, .pdf, or .txt using a tool like Microsoft Word or an online converter."
           );
+        } else if (
+          file.name.endsWith(".jpg") ||
+          file.name.endsWith(".jpeg") ||
+          file.name.endsWith(".png") ||
+          file.name.endsWith(".gif") ||
+          file.name.endsWith(".bmp")
+        ) {
+          // Handle image files using Tesseract.js
+          const { data: { text } } = await Tesseract.recognize(file, "eng+hin", {
+            logger: (m) => console.log(m),
+          });
+          extractedText = text;
         } else {
           throw new Error(
-            "Unsupported file format. Please upload a .pdf, .docx, or .txt file."
+            "Unsupported file format. Please upload a .pdf, .docx, .txt, or image file (.jpg, .jpeg, .png, .gif, .bmp)."
           );
         }
-
+  
         const cleanedText = extractedText
           .replace(/\n{3,}/g, "\n\n")
           .replace(/[ \t]+/g, " ")
           .trim();
-
+  
         if (cleanedText) {
           setText(cleanedText);
           await translateText(cleanedText, from, to);
