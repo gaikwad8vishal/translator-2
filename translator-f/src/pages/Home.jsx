@@ -31,8 +31,9 @@ const Translator = () => {
   const [isLiveChatOpen, setIsLiveChatOpen] = useState(false);
   const [isPdfJsLoaded, setIsPdfJsLoaded] = useState(false);
   const [mammoth, setMammoth] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const { translatedText, loading, error: translationError, setError: setTranslationError, history, setHistory, translateText } = useTranslation();
+  const { translatedText, loading: translationLoading, error: translationError, setError: setTranslationError, history, setHistory, translateText } = useTranslation();
 
   const { isListening, startSpeechRecognition, stopSpeechRecognition, speakText, error: speechError, setError: setSpeechError, isSpeaking } = useSpeech(from, (transcript) => setText((prev) => prev + transcript));
 
@@ -90,7 +91,10 @@ const Translator = () => {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (text.trim()) translateText(text, from, to);
+      if (text.trim()) {
+        setIsLoading(true);
+        translateText(text, from, to).finally(() => setIsLoading(false));
+      }
     }, 500);
     return () => clearTimeout(timer);
   }, [text, from, to, translateText]);
@@ -99,7 +103,10 @@ const Translator = () => {
     setFrom(to);
     setTo(from);
     setText(translatedText);
-    if (translatedText) translateText(translatedText, to, from);
+    if (translatedText) {
+      setIsLoading(true);
+      translateText(translatedText, to, from).finally(() => setIsLoading(false));
+    }
   }, [from, to, translatedText, translateText]);
 
   const handleHistoryClick = useCallback(() => {
@@ -132,6 +139,8 @@ const Translator = () => {
       if (!file) return;
 
       setTranslationError("");
+      setIsLoading(true);
+
       try {
         let extractedText = "";
 
@@ -187,12 +196,12 @@ const Translator = () => {
       } catch (error) {
         setTranslationError(`Error: ${error.message || "Failed to process document"}`);
         setTimeout(() => setTranslationError(""), 5000);
+      } finally {
+        setIsLoading(false);
       }
     },
     [mammoth, translateText, setTranslationError, isPdfJsLoaded]
   );
-
-
 
   const handlePhotoUpload = useCallback(
     async (event) => {
@@ -200,11 +209,15 @@ const Translator = () => {
       if (!file) return;
 
       setTranslationError("");
+      setIsLoading(true);
+
       try {
-        const { data: { text } } = await Tesseract.recognize(file, "eng", {
+        const { data: { text } } = await Tesseract.recognize(file, "eng+hin", {
           logger: (m) => console.log(m),
         });
+
         const cleanedText = text
+          .replace(/[^\w\s\u0900-\u097F\n]/g, "")
           .replace(/\n{3,}/g, "\n\n")
           .replace(/[ \t]+/g, " ")
           .trim();
@@ -219,11 +232,12 @@ const Translator = () => {
       } catch (error) {
         setTranslationError(`Error: ${error.message || "Failed to process image"}`);
         setTimeout(() => setTranslationError(""), 5000);
+      } finally {
+        setIsLoading(false);
       }
     },
     [translateText, setTranslationError]
   );
-  
 
   return (
     <div className="flex flex-col md:mt-4 mb-12 justify-center p-4">
@@ -274,10 +288,11 @@ const Translator = () => {
             onSpeak={() => speakText(text, from === "auto" ? "en" : from)}
             onDocumentUpload={handleDocumentUpload}
             onPhotoUpload={handlePhotoUpload}
+            isLoading={isLoading || translationLoading}
           />
           <TextOutput
             text={translatedText}
-            loading={loading}
+            loading={translationLoading}
             onCopy={() => {}}
             onSpeak={() => speakText(translatedText, to)}
           />
