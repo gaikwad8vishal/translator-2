@@ -312,7 +312,7 @@ const Translator = () => {
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 w-full bg-slate-100 shadow-lg flex justify-around items-center py-3 md:flex md:gap-4 md:bottom-4 md:justify-center border md:bg-transparent md:shadow-none" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+      <div className="fixed bottom-0 left-0 w-full bg-slate-100 shadow-lg flex justify-around items-center py-3 md:flex md:gap-4 md:bottom-4 md:justify-center  md:bg-transparent md:shadow-none" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
         <button
           onClick={handleChatClick}
           className="p-3 rounded-full bg-transparent text-gray-600 md:shadow-lg"

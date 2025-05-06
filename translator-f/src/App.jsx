@@ -11,7 +11,7 @@ function App() {
   return (
     <ThemeProvider>    
       <AuthProvider>
-      <Router> {/* ✅ Router ke andar rakho */}
+      <Router> 
         <AuthWatcher /> 
         <div className="flex flex-col min-h-screen">
           <Header />
