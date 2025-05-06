@@ -6,17 +6,13 @@ import { languages } from "../components/constants";
 import { useGeolocation } from "../components/languagebylocation";
 import { useSpeech } from "../components/UseSpeech";
 
-
-
 const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
-
-
 
 const ChatSidebar = ({ isOpen, setIsOpen }) => {
   const [chatHistory, setChatHistory] = useState([]);
   const [chatInput, setChatInput] = useState("");
   const [from, setFrom] = useState("en");
-  const [to, setTo] = useState("en");
+  const [to, setTo] = useState("hi");
   const [detectedLanguage, setDetectedLanguage] = useState("hi");
   const sidebarRef = useRef(null);
   const chatContainerRef = useRef(null);
@@ -75,43 +71,83 @@ const ChatSidebar = ({ isOpen, setIsOpen }) => {
     if (!message) return;
 
     let originalText;
-    let originalFrom;
+    let sourceFrom;
+    let targetTo;
+
     if (message.type === "user") {
       originalText = message.text;
-      originalFrom = newFrom || message.from;
+      sourceFrom = newFrom || message.from;
+      targetTo = message.to;
     } else {
       const userMessage = chatHistory.find((m) => m.id === message.userMessageId);
       if (!userMessage) return;
       originalText = userMessage.text;
-      originalFrom = userMessage.from;
+      sourceFrom = newFrom || userMessage.from;
+      targetTo = newTo || message.to;
     }
 
     try {
       const response = await axios.post(
         `${backendURL}/translate/`,
-        { text: originalText, from: newFrom || originalFrom, to: newTo || message.to },
-        { headers: { "Content-Type": "application/json" } }
+        {
+          text: originalText,
+          from: sourceFrom,
+          to: targetTo,
+        },
+        {
+          headers: { "Content-Type": "application/json" },
+        }
       );
       const translated = response.data.translatedText;
 
+      setChatHistory((prev) => {
+        let updatedHistory = prev.map((msg) => {
+          if (msg.id === msgId) {
+            return {
+              ...msg,
+              from: newFrom || msg.from,
+              to: newTo || msg.to,
+              text: translated,
+              error: translated.startsWith("Error:") ? translated.replace("Error: ", "") : null,
+            };
+          }
+          // Update the corresponding user message if it's a bot message
+          if (msg.type === "user" && message.type === "bot" && message.userMessageId === msg.id) {
+            return {
+              ...msg,
+              from: newFrom || msg.from,
+            };
+          }
+          return msg;
+        });
+
+        // If the changed message is a user message, update the corresponding bot message
+        if (message.type === "user") {
+          updatedHistory = updatedHistory.map((msg) => {
+            if (msg.type === "bot" && msg.userMessageId === msgId) {
+              return {
+                ...msg,
+                text: translated,
+                from: newFrom || msg.from,
+                to: msg.to,
+                error: translated.startsWith("Error:") ? translated.replace("Error: ", "") : null,
+              };
+            }
+            return msg;
+          });
+        }
+
+        return updatedHistory;
+      });
+    } catch (error) {
       setChatHistory((prev) =>
         prev.map((msg) =>
           msg.id === msgId
             ? {
                 ...msg,
-                from: newFrom || msg.from,
-                to: newTo || msg.to,
-                text: msg.type === "bot" ? translated : msg.text,
-                error: translated.startsWith("Error:") ? translated.replace("Error: ", "") : null,
+                text: `Error: ${error.message}`,
+                error: error.message,
               }
-            : msg
-        )
-      );
-    } catch (error) {
-      setChatHistory((prev) =>
-        prev.map((msg) =>
-          msg.id === msgId
-            ? { ...msg, from: newFrom || msg.from, to: newTo || msg.to, text: `Error: ${error.message}`, error: error.message }
             : msg
         )
       );
