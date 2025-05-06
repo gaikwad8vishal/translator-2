@@ -1,4 +1,4 @@
-export const backendURL = "https://translator-2-1.onrender.com";
+export const backendURL = import.meta.env.VITE_BACKEND_URL;
 
 export const languages = [
   { code: "as", name: "Assamese" },
