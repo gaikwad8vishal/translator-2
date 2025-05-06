@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { Mic, MicOff, Volume2, X } from "lucide-react"; // Added X icon
-import { FaUpload, FaPaperclip } from "react-icons/fa"; // Removed FaCamera as it's unused
+import { Mic, MicOff, Volume2, X } from "lucide-react";
+import { FaUpload, FaPaperclip } from "react-icons/fa";
 
 const TextInput = ({
   value,
@@ -10,7 +10,7 @@ const TextInput = ({
   onSpeak,
   onDocumentUpload,
   onPhotoUpload,
-  isLoading = false,
+  isUploading = false, // Renamed from isLoading to isUploading
 }) => {
   const textareaRef = useRef(null);
   const [inputHeight, setInputHeight] = useState("auto");
@@ -44,16 +44,16 @@ const TextInput = ({
           <textarea
             ref={textareaRef}
             value={value}
-            onChange={(e) => !isLoading && onChange(e.target.value)}
+            onChange={(e) => !isUploading && onChange(e.target.value)} // Use isUploading
             className={`w-full min-h-32 resize-none focus:outline-none ${
-              isLoading ? "opacity-50 cursor-not-allowed" : ""
-            }`}
-            placeholder={isLoading ? "" : "Enter text or use the microphone..."}
+              isUploading ? "opacity-50 cursor-not-allowed" : ""
+            }`} // Use isUploading
+            placeholder={isUploading ? "" : "Enter text or use the microphone..."}
             style={{ height: inputHeight, overflowWrap: "break-word", whiteSpace: "pre-wrap" }}
             aria-label="Input text for translation"
-            disabled={isLoading}
+            disabled={isUploading} // Use isUploading
           />
-          {isLoading && (
+          {isUploading && (
             <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75">
               <svg
                 className="animate-spin h-5 w-5 text-gray-500 mr-2"
@@ -79,12 +79,12 @@ const TextInput = ({
             </div>
           )}
         </div>
-        {value && !isLoading && (
+        {value && !isUploading && (
           <button
             onClick={() => onChange("")}
             className="text-gray-500 hover:text-gray-900"
             aria-label="Clear input"
-            disabled={isLoading}
+            disabled={isUploading} // Use isUploading
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -104,7 +104,7 @@ const TextInput = ({
           onClick={onMicrophoneToggle}
           className="text-gray-500 hover:text-gray-700"
           aria-label={isListening ? "Stop microphone" : "Start microphone"}
-          disabled={isLoading}
+          disabled={isUploading} // Use isUploading
         >
           {isListening ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
         </button>
@@ -113,7 +113,7 @@ const TextInput = ({
             onClick={onSpeak}
             className="text-gray-500 hover:text-gray-700"
             aria-label="Speak input text"
-            disabled={isLoading}
+            disabled={isUploading} // Use isUploading
           >
             <Volume2 className="w-6 h-6" />
           </button>
@@ -121,7 +121,7 @@ const TextInput = ({
             onClick={() => setIsUploadMenuOpen(!isUploadMenuOpen)}
             className="text-gray-500 hover:text-gray-700"
             aria-label={isUploadMenuOpen ? "Close upload menu" : "Open upload menu"}
-            disabled={isLoading}
+            disabled={isUploading} // Use isUploading
           >
             {isUploadMenuOpen ? <X className="w-6 h-6" /> : <FaPaperclip className="w-6 h-6" />}
           </button>
@@ -135,7 +135,7 @@ const TextInput = ({
                   onChange={handlePhotoUpload}
                   className="hidden"
                   aria-label="Upload photo"
-                  disabled={isLoading}
+                  disabled={isUploading} // Use isUploading
                 />
               </label>
               <label className="flex items-center gap-2 p-2 hover:bg-gray-100 w-full text-left cursor-pointer">
@@ -146,7 +146,7 @@ const TextInput = ({
                   onChange={handleDocumentUploadWrapper}
                   className="hidden"
                   aria-label="Upload document"
-                  disabled={isLoading}
+                  disabled={isUploading} // Use isUploading
                 />
               </label>
             </div>
