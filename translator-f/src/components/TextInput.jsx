@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Mic, MicOff, Volume2 } from "lucide-react";
-import { FaUpload, FaPaperclip } from "react-icons/fa";
+import { FaUpload, FaPaperclip, FaCamera } from "react-icons/fa";
 
 const TextInput = ({
   value,
@@ -8,10 +8,8 @@ const TextInput = ({
   onMicrophoneToggle,
   isListening,
   onSpeak,
-  onPhotoUpload,
   onDocumentUpload,
-  originalImage,
-  processedImage,
+  onPhotoUpload,
 }) => {
   const textareaRef = useRef(null);
   const [inputHeight, setInputHeight] = useState("auto");
@@ -28,15 +26,15 @@ const TextInput = ({
     }
   }, [value]);
 
-  const handlePhotoUploadWrapper = (event) => {
-    onPhotoUpload(event, setIsUploadMenuOpen);
-    setIsUploadMenuOpen(false);
-  };
-
   const handleDocumentUploadWrapper = (event) => {
     onDocumentUpload(event);
     setIsUploadMenuOpen(false);
   };
+
+  const handlePhotoUpload = (event) => {
+    onPhotoUpload(event);
+    setIsUploadMenuOpen(false);
+  }
 
   return (
     <div className="p-4 border rounded-lg min-h-40 relative">
@@ -69,25 +67,6 @@ const TextInput = ({
           </button>
         )}
       </div>
-      {(originalImage || processedImage) && (
-        <div className="mt-4">
-          <h3 className="text-sm font-semibold">Document Preview</h3>
-          <div className="flex gap-4">
-            {originalImage && (
-              <div>
-                <p className="text-xs">Original</p>
-                <img src={originalImage} alt="Original" className="max-w-xs" />
-              </div>
-            )}
-            {processedImage && (
-              <div>
-                <p className="text-xs">Scanned</p>
-                <img src={processedImage} alt="Processed" className="max-w-xs" />
-              </div>
-            )}
-          </div>
-        </div>
-      )}
       <div className="flex justify-between mb-2">
         <button
           onClick={onMicrophoneToggle}
@@ -114,25 +93,25 @@ const TextInput = ({
           {isUploadMenuOpen && (
             <div className="absolute z-10 bottom-12 right-4 bg-white border rounded-lg shadow-lg p-2">
               <label className="flex items-center gap-2 p-2 hover:bg-gray-100 w-full text-left cursor-pointer">
-                <FaUpload className="w-4 h-4" /> Photo
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePhotoUploadWrapper}
-                  className="hidden"
-                  aria-label="Upload photo"
-                />
-              </label>
-              <label className="flex items-center gap-2 p-2 hover:bg-gray-100 w-full text-left cursor-pointer">
                 <FaUpload className="w-4 h-4" /> Document
                 <input
                   type="file"
-                  accept=".pdf,.doc,.docx,.txt"
+                  accept=".pdf,.docx,.txt"
                   onChange={handleDocumentUploadWrapper}
                   className="hidden"
                   aria-label="Upload document"
                 />
               </label>
+              <label className="flex items-center gap-2 p-2 hover:bg-gray-100 w-full text-left cursor-pointer">
+                <FaCamera className="w-4 h-4" /> Photo
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                  className="hidden"
+                  aria-label="Upload photo"
+                />
+              </label>  
             </div>
           )}
           <div className="flex items-center text-md text-right">

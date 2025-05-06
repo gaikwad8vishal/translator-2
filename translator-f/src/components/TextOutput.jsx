@@ -43,7 +43,7 @@ const TextOutput = ({ text, loading, onCopy, onSpeak }) => {
         ) : text ? (
           <p>{text}</p>
         ) : (
-          <span className="text-gray-500">Translation will appear here...</span>
+          <span className="text-gray-500">Output will appear here...</span>
         )}
       </div>
       <div className="flex gap-2">
@@ -51,6 +51,7 @@ const TextOutput = ({ text, loading, onCopy, onSpeak }) => {
           onClick={handleCopy}
           className="text-gray-500 hover:text-black"
           aria-label={copied ? "Text copied" : "Copy text"}
+          disabled={!text}
         >
           {copied ? (
             <HiClipboardCheck className="w-5 h-5 text-green-500" />
@@ -62,6 +63,7 @@ const TextOutput = ({ text, loading, onCopy, onSpeak }) => {
           onClick={onSpeak}
           className="text-gray-500 hover:text-gray-700"
           aria-label="Speak output text"
+          disabled={!text}
         >
           <Volume2 className="w-5 h-5" />
         </button>
