@@ -1,0 +1,25 @@
+export const backendURL = "https://translator-2-1.onrender.com";
+
+export const languages = [
+  { code: "as", name: "Assamese" },
+  { code: "bn", name: "Bengali" },
+  { code: "en", name: "English" },
+  { code: "gbm", name: "Garhwali" },
+  { code: "gu", name: "Gujarati" },
+  { code: "hi", name: "Hindi" },
+  { code: "kn", name: "Kannada" },
+  { code: "kfy", name: "Kumaoni" },
+  { code: "mai", name: "Maithili" },
+  { code: "ml", name: "Malayalam" },
+  { code: "mr", name: "Marathi" },
+  { code: "mtei", name: "Meitei" },
+  { code: "ne", name: "Nepali" },
+  { code: "or", name: "Odia" },
+  { code: "pa", name: "Punjabi" },
+  { code: "sa", name: "Sanskrit" },
+  { code: "si", name: "Sinhala" },
+  { code: "ta", name: "Tamil" },
+  { code: "te", name: "Telugu" },
+  { code: "tcy", name: "Tulu" },
+  { code: "ur", name: "Urdu" },
+];
