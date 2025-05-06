@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { Mic, MicOff, Volume2 } from "lucide-react";
-import { FaUpload, FaPaperclip, FaCamera } from "react-icons/fa";
+import { Mic, MicOff, Volume2, X } from "lucide-react"; // Added X icon
+import { FaUpload, FaPaperclip } from "react-icons/fa"; // Removed FaCamera as it's unused
 
 const TextInput = ({
   value,
@@ -43,15 +43,15 @@ const TextInput = ({
         <div className="relative w-full">
           <textarea
             ref={textareaRef}
-            value={value} // Keep original value
-            onChange={(e) => !isLoading && onChange(e.target.value)} // Disable input during loading
+            value={value}
+            onChange={(e) => !isLoading && onChange(e.target.value)}
             className={`w-full min-h-32 resize-none focus:outline-none ${
               isLoading ? "opacity-50 cursor-not-allowed" : ""
-            }`} // Fade textarea during loading
+            }`}
             placeholder={isLoading ? "" : "Enter text or use the microphone..."}
             style={{ height: inputHeight, overflowWrap: "break-word", whiteSpace: "pre-wrap" }}
             aria-label="Input text for translation"
-            disabled={isLoading} // Disable textarea during loading
+            disabled={isLoading}
           />
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75">
@@ -120,24 +120,13 @@ const TextInput = ({
           <button
             onClick={() => setIsUploadMenuOpen(!isUploadMenuOpen)}
             className="text-gray-500 hover:text-gray-700"
-            aria-label="Open upload menu"
+            aria-label={isUploadMenuOpen ? "Close upload menu" : "Open upload menu"}
             disabled={isLoading}
           >
-            <FaPaperclip className="w-6 h-6" />
+            {isUploadMenuOpen ? <X className="w-6 h-6" /> : <FaPaperclip className="w-6 h-6" />}
           </button>
           {isUploadMenuOpen && (
             <div className="absolute z-10 bottom-12 right-4 bg-white border rounded-lg shadow-lg p-2">
-              <label className="flex items-center gap-2 p-2 hover:bg-gray-100 w-full text-left cursor-pointer">
-                <FaUpload className="w-4 h-4" /> Document
-                <input
-                  type="file"
-                  accept=".pdf,.docx,.txt"
-                  onChange={handleDocumentUploadWrapper}
-                  className="hidden"
-                  aria-label="Upload document"
-                  disabled={isLoading}
-                />
-              </label>
               <label className="flex items-center gap-2 p-2 hover:bg-gray-100 w-full text-left cursor-pointer">
                 <FaUpload className="w-4 h-4" /> Photo
                 <input
@@ -146,6 +135,17 @@ const TextInput = ({
                   onChange={handlePhotoUpload}
                   className="hidden"
                   aria-label="Upload photo"
+                  disabled={isLoading}
+                />
+              </label>
+              <label className="flex items-center gap-2 p-2 hover:bg-gray-100 w-full text-left cursor-pointer">
+                <FaUpload className="w-4 h-4" /> Document
+                <input
+                  type="file"
+                  accept=".pdf,.docx,.txt"
+                  onChange={handleDocumentUploadWrapper}
+                  className="hidden"
+                  aria-label="Upload document"
                   disabled={isLoading}
                 />
               </label>
