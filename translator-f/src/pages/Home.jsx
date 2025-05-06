@@ -13,7 +13,7 @@ import TextOutput from "../components/TextOutput";
 import HistorySidebar from "../components/HistorySidebar";
 import ChatSidebar from "../components/ChatSidebar";
 import { useTranslation } from "../components/useTranslation";
-import { useSpeech } from "../components/useSpeech";
+import { useSpeech } from "../components/UseSpeech";
 
 
 
