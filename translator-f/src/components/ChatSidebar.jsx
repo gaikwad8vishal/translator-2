@@ -219,7 +219,7 @@ const ChatSidebar = ({ isOpen, setIsOpen }) => {
               <div
                 key={msg.id}
                 className={`flex ${
-                  msg.type === "user" ? "justify-end" : "justify-start"
+                  msg.type === "user" ? "justify-start" : "justify-end"
                 }`}
               >
                 <div className="max-w-[80%]">
@@ -272,32 +272,74 @@ const ChatSidebar = ({ isOpen, setIsOpen }) => {
         </div>
 
         <div className="p-2 border-t">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              placeholder="Type your message..."
-              className="flex-1 p-2 border rounded-lg focus:outline-none"
-              onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-              aria-label="Chat input"
-            />
-            <button
-              onClick={() => (isListening ? stopSpeechRecognition() : startSpeechRecognition())}
-              className={`p-2 rounded-lg text-white ${
-                isListening ? "bg-red-600 hover:bg-red-700" : "bg-purple-800 hover:bg-purple-900"
-              }`}
-              aria-label={isListening ? "Stop microphone" : "Start microphone"}
-            >
-              {isListening ? <Mic size={20} /> : <MicOff size={20} />}
-            </button>
-            <button
-              onClick={handleSendMessage}
-              className="p-2 bg-purple-800 text-white rounded-lg hover:bg-purple-900"
-              aria-label="Send message"
-            >
-              <IoMdSend />
-            </button>
+          <div className="flex flex-col gap-2">
+            {/* Language Selection Form */}
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label htmlFor="from-lang" className="text-xs text-gray-600">
+                  From:
+                </label>
+                <select
+                  id="from-lang"
+                  value={from}
+                  onChange={(e) => setFrom(e.target.value)}
+                  className="w-full p-1 border rounded-lg focus:outline-none text-sm"
+                  aria-label="Select source language"
+                >
+                  {languages.map((lang) => (
+                    <option key={lang.code} value={lang.code}>
+                      {lang.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex-1">
+                <label htmlFor="to-lang" className="text-xs text-gray-600">
+                  To:
+                </label>
+                <select
+                  id="to-lang"
+                  value={to}
+                  onChange={(e) => setTo(e.target.value)}
+                  className="w-full p-1 border rounded-lg focus:outline-none text-sm"
+                  aria-label="Select target language"
+                >
+                  {languages.map((lang) => (
+                    <option key={lang.code} value={lang.code}>
+                      {lang.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            {/* Chat Input and Buttons */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                placeholder="Type your message..."
+                className="flex-1 p-2 border rounded-lg focus:outline-none"
+                onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+                aria-label="Chat input"
+              />
+              <button
+                onClick={() => (isListening ? stopSpeechRecognition() : startSpeechRecognition())}
+                className={`p-2 rounded-lg text-white ${
+                  isListening ? "bg-red-600 hover:bg-red-700" : "bg-purple-800 hover:bg-purple-900"
+                }`}
+                aria-label={isListening ? "Stop microphone" : "Start microphone"}
+              >
+                {isListening ? <Mic size={20} /> : <MicOff size={20} />}
+              </button>
+              <button
+                onClick={handleSendMessage}
+                className="p-2 bg-purple-800 text-white rounded-lg hover:bg-purple-900"
+                aria-label="Send message"
+              >
+                <IoMdSend />
+              </button>
+            </div>
           </div>
         </div>
       </div>
