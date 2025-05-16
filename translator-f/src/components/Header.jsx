@@ -36,7 +36,7 @@ const Header = () => {
             </button>
 
             {dropdownOpen && (
-              <div className="absolute right-0 mt-2 w-44 shadow-lg rounded-lg p-3 bg-gray-100 text-gray-700">
+              <div className="absolute right-0 mt-2 z-90 w-44 shadow-lg rounded-lg p-3 bg-gray-100 text-gray-700">
                 <p className="text-sm px-2 font-medium">{user?.email}</p>
                 <hr className="my-2 border-gray-300" />
                 <button
