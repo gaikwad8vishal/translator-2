@@ -1,724 +1,426 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { IoMdSend } from "react-icons/io";
-import { LogOut, Mic, MicOff } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
+import { Mic, MicOff, Sun, Moon, ArrowLeft, Users } from "lucide-react";
+import { languages } from "../components/constants";
 import { useGeolocation } from "../components/languagebylocation";
-import useSpeech from "../pages/Home";
+import { useSpeech } from "../components/UseSpeech";
 
-// Use environment variable for WebSocket and Backend URL
-const socketURL = import.meta.env.VITE_WEBSOCKET_URL || "ws://localhost:8080";
 const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
 
-// Available languages for translation
-const languages = [
-  { code: "as", name: "Assamese" },
-  { code: "bn", name: "Bengali" },
-  { code: "en", name: "English" },
-  { code: "gbm", name: "Garhwali" },
-  { code: "gu", name: "Gujarati" },
-  { code: "hi", name: "Hindi" },
-  { code: "kn", name: "Kannada" },
-  { code: "kfy", name: "Kumaoni" },
-  { code: "mai", name: "Maithili" },
-  { code: "ml", name: "Malayalam" },
-  { code: "mr", name: "Marathi" },
-  { code: "mtei", name: "Meitei" },
-  { code: "ne", name: "Nepali" },
-  { code: "or", name: "Odia" },
-  { code: "pa", name: "Punjabi" },
-  { code: "sa", name: "Sanskrit" },
-  { code: "si", name: "Sinhala" },
-  { code: "ta", name: "Tamil" },
-  { code: "te", name: "Telugu" },
-  { code: "tcy", name: "Tulu" },
-  { code: "ur", name: "Urdu" },
-];
+const TwoWayCommunication = () => {
+  const [chatHistoryA, setChatHistoryA] = useState([]);
+  const [chatHistoryB, setChatHistoryB] = useState([]);
+  const [inputA, setInputA] = useState("");
+  const [inputB, setInputB] = useState("");
+  const [fromA, setFromA] = useState("en");
+  const [toA, setToA] = useState("hi");
+  const [fromB, setFromB] = useState("hi");
+  const [toB, setToB] = useState("en");
+  const [detectedLanguageA, setDetectedLanguageA] = useState("en");
+  const [detectedLanguageB, setDetectedLanguageB] = useState("hi");
+  const [theme, setTheme] = useState("light");
+  const chatContainerRefA = useRef(null);
+  const chatContainerRefB = useRef(null);
+  const textareaRefA = useRef(null);
+  const textareaRefB = useRef(null);
 
-const LiveChatSidebar = ({ isOpen, setIsOpen }) => {
-  const [socket, setSocket] = useState(null);
-  const [currentRoomId, setCurrentRoomId] = useState("");
-  const [createRoomInput, setCreateRoomInput] = useState("");
-  const [joinRoomInput, setJoinRoomInput] = useState("");
-  const [chatMessages, setChatMessages] = useState([]);
-  const [chatInput, setChatInput] = useState("");
-  const [error, setError] = useState("");
-  const [isConnected, setIsConnected] = useState(false);
-  const [from, setFrom] = useState("en"); // User's input language
-  const [to, setTo] = useState("hi"); // Default display language for incoming messages
-  const [detectedLanguage, setDetectedLanguage] = useState("hi"); // Detected language from geolocation
-  const [isLanguageManuallySet, setIsLanguageManuallySet] = useState(false); // Track manual language selection
-  const chatContainerRef = useRef(null);
-  const sidebarRef = useRef(null);
-  const textareaRef = useRef(null);
-  const reconnectAttempts = useRef(0);
-  const maxReconnectAttempts = 5;
-  const reconnectInterval = useRef(1000);
-  const clientId = useRef(Date.now().toString());
-  const [inputHeight, setInputHeight] = useState("auto");
-  const reconnectTimeoutRef = useRef(null); // To store setTimeout ID for cleanup
+  const { getUserLanguage: getUserLanguageA, error: geoErrorA, setError: setGeoErrorA } = useGeolocation(setToA, setDetectedLanguageA);
+  const { getUserLanguage: getUserLanguageB, error: geoErrorB, setError: setGeoErrorB } = useGeolocation(setToB, setDetectedLanguageB);
+  const { isListening: isListeningA, startSpeechRecognition: startSpeechA, stopSpeechRecognition: stopSpeechA, error: speechErrorA, setError: setSpeechErrorA } = useSpeech(fromA, (transcript) => setInputA((prev) => prev + transcript));
+  const { isListening: isListeningB, startSpeechRecognition: startSpeechB, stopSpeechRecognition: stopSpeechB, error: speechErrorB, setError: setSpeechErrorB } = useSpeech(fromB, (transcript) => setInputB((prev) => prev + transcript));
 
-  // Speech recognition and geolocation hooks
-  const { isListening, startSpeechRecognition, stopSpeechRecognition, error: speechError, setError: setSpeechError } = useSpeech(
-    from,
-    (transcript) => setChatInput((prev) => prev + transcript)
-  );
-  const { getUserLanguage, error: geoError, setError: setGeoError } = useGeolocation(
-    (lang) => {
-      if (!isLanguageManuallySet) {
-        setFrom(lang); // Only update 'from' language
-        setDetectedLanguage(lang);
-      }
-    },
-    setDetectedLanguage
-  );
-
-  // Adjust textarea height dynamically
+  // Adjust textarea height
   useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      const scrollHeight = textareaRef.current.scrollHeight;
-      textareaRef.current.style.height = `${scrollHeight}px`;
-      setInputHeight(`${scrollHeight}px`);
+    if (textareaRefA.current) {
+      textareaRefA.current.style.height = "auto";
+      textareaRefA.current.style.height = `${textareaRefA.current.scrollHeight}px`;
     }
-  }, [chatInput]);
+    if (textareaRefB.current) {
+      textareaRefB.current.style.height = "auto";
+      textareaRefB.current.style.height = `${textareaRefB.current.scrollHeight}px`;
+    }
+  }, [inputA, inputB]);
 
-  // Translate a message
-  const translateMessage = useCallback(
-    async (text, clientId, from, to, roomId, timestamp, isMyMessage) => {
-      try {
-        const response = await axios.post(
-          `${backendURL}/translate/`,
-          { text, from, to },
-          { headers: { "Content-Type": "application/json" } }
-        );
-        const translated = response.data.translatedText;
-
-        setChatMessages((prev) => {
-          const messageExists = prev.find((msg) => msg.id === timestamp && msg.clientId === clientId);
-          if (messageExists) {
-            // Update existing message
-            return prev.map((msg) =>
-              msg.id === timestamp && msg.clientId === clientId
-                ? {
-                    ...msg,
-                    content: translated,
-                    from,
-                    to,
-                    error: translated.startsWith("Error:") ? translated.replace("Error: ", "") : null,
-                  }
-                : msg
-            );
-          }
-          // Add new message
-          return [
-            ...prev,
-            {
-              type: "message",
-              content: translated,
-              clientId,
-              roomId,
-              timestamp,
-              from,
-              to,
-              id: timestamp,
-              originalText: text,
-              error: translated.startsWith("Error:") ? translated.replace("Error: ", "") : null,
-            },
-          ];
-        });
-      } catch (error) {
-        setChatMessages((prev) => {
-          const messageExists = prev.find((msg) => msg.id === timestamp && msg.clientId === clientId);
-          if (messageExists) {
-            // Update existing message with error
-            return prev.map((msg) =>
-              msg.id === timestamp && msg.clientId === clientId
-                ? {
-                    ...msg,
-                    content: `Error: ${error.message}`,
-                    from,
-                    to,
-                    error: error.message,
-                  }
-                : msg
-            );
-          }
-          // Add new error message
-          return [
-            ...prev,
-            {
-              type: "message",
-              content: `Error: ${error.message}`,
-              clientId,
-              roomId,
-              timestamp,
-              from,
-              to,
-              id: timestamp,
-              error: error.message,
-              originalText: text,
-            },
-          ];
-        });
-      }
-    },
-    []
-  );
-
-  // Call getUserLanguage when sidebar opens, but only for 'from' and 'detectedLanguage'
+  // Call geolocation
   useEffect(() => {
-    if (isOpen && !isLanguageManuallySet) {
-      getUserLanguage();
-    }
-  }, [isOpen, getUserLanguage, isLanguageManuallySet]);
+    getUserLanguageA();
+    getUserLanguageB();
+  }, [getUserLanguageA, getUserLanguageB]);
 
-  // Handle errors
-  const handleError = useCallback((message, persistent = false) => {
-    setError(message);
-    if (!persistent) {
-      setTimeout(() => setError(""), 10000);
+  // Scroll chat containers
+  useEffect(() => {
+    if (chatContainerRefA.current) {
+      chatContainerRefA.current.scrollTop = chatContainerRefA.current.scrollHeight;
     }
-    console.error("Error:", message);
+    if (chatContainerRefB.current) {
+      chatContainerRefB.current.scrollTop = chatContainerRefB.current.scrollHeight;
+    }
+  }, [chatHistoryA, chatHistoryB]);
+
+  // Toggle theme
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(theme === "light" ? "dark" : "light");
+  };
+
+  const handleSendMessage = useCallback(async (speaker, text, fromLang, toLang, setChatHistory, otherSetChatHistory) => {
+    if (!text.trim()) return;
+
+    const messageId = Date.now();
+    const userMessage = { type: "user", text, id: messageId, from: fromLang, to: toLang };
+    setChatHistory((prev) => [...prev, userMessage]);
+
+    try {
+      const response = await axios.post(
+        `${backendURL}/translate/`,
+        { text, from: fromLang, to: toLang },
+        { headers: { "Content-Type": "application/json" } }
+      );
+      const translated = response.data.translatedText;
+      const translatedMessage = {
+        type: "translated",
+        text: translated,
+        id: Date.now() + 1,
+        from: fromLang,
+        to: toLang,
+        originalId: messageId,
+        error: translated.startsWith("Error:") ? translated.replace("Error: ", "") : null,
+      };
+      setChatHistory((prev) => [...prev, translatedMessage]);
+      otherSetChatHistory((prev) => [...prev, userMessage, translatedMessage]);
+    } catch (error) {
+      const errorMessage = {
+        type: "translated",
+        text: `Error: ${error.message}`,
+        id: Date.now() + 1,
+        from: fromLang,
+        to: toLang,
+        originalId: messageId,
+        error: error.message,
+      };
+      setChatHistory((prev) => [...prev, errorMessage]);
+      otherSetChatHistory((prev) => [...prev, userMessage, errorMessage]);
+    }
   }, []);
 
-  // Initialize and manage WebSocket connection
-  const connectWebSocket = useCallback(() => {
-    if (socket && socket.readyState === WebSocket.OPEN) {
-      console.log("WebSocket already connected");
-      return;
-    }
-
-    if (reconnectAttempts.current >= maxReconnectAttempts) {
-      handleError("Max reconnect attempts reached. Please refresh the page.", true);
-      return;
-    }
-
-    console.log("Initiating WebSocket connection to:", socketURL);
-    const newSocket = new WebSocket(socketURL);
-
-    newSocket.onopen = () => {
-      setIsConnected(true);
-      reconnectAttempts.current = 0;
-      reconnectInterval.current = 1000;
-      console.log("WebSocket connected successfully");
-    };
-
-    newSocket.onclose = (event) => {
-      setIsConnected(false);
-      console.log("WebSocket disconnected, code:", event.code, "reason:", event.reason);
-      if (reconnectAttempts.current < maxReconnectAttempts) {
-        const delay = reconnectInterval.current;
-        console.log(`Attempting to reconnect in ${delay}ms... (Attempt ${reconnectAttempts.current + 1})`);
-        reconnectTimeoutRef.current = setTimeout(() => {
-          reconnectAttempts.current += 1;
-          reconnectInterval.current *= 2;
-          connectWebSocket();
-        }, delay);
-      } else {
-        handleError("Failed to reconnect to chat server after multiple attempts.", true);
-      }
-    };
-
-    newSocket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        console.log("Received WebSocket message:", data);
-        handleSocketMessage(data);
-      } catch (error) {
-        console.error("Failed to parse WebSocket message:", error);
-        handleError("Failed to process server message");
-      }
-    };
-
-    newSocket.onerror = (error) => {
-      console.error("WebSocket error:", error);
-      setIsConnected(false);
-    };
-
-    setSocket(newSocket);
-  }, [handleError]);
-
-  // Initialize WebSocket connection when component mounts
-  useEffect(() => {
-    connectWebSocket();
-
-    // Cleanup on component unmount
-    return () => {
-      if (socket && socket.readyState === WebSocket.OPEN) {
-        console.log("Closing WebSocket on component unmount");
-        socket.close(1000, "Component unmounted");
-      }
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = null;
-      }
-      setSocket(null);
-      setIsConnected(false);
-    };
-  }, [connectWebSocket]);
-
-  // Scroll chat container to the bottom
-  useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-    }
-  }, [chatMessages]);
-
-  // Close sidebar when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (isOpen && sidebarRef.current && !sidebarRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isOpen, setIsOpen]);
-
-  // Handle WebSocket messages
-  const handleSocketMessage = (data) => {
-    switch (data.type) {
-      case "userJoined":
-        addSystemMessage(`A user joined`);
-        break;
-      case "userLeft":
-        addSystemMessage(`A user left`);
-        break;
-      case "message":
-        // Translate incoming messages to user's preferred 'to' language or fallback to detected language
-        translateMessage(
-          data.content,
-          data.clientId,
-          data.from || "en",
-          to || detectedLanguage,
-          data.roomId,
-          data.timestamp,
-          data.clientId === clientId.current
-        );
-        break;
-      case "error":
-        console.log("Server error:", data.message);
-        handleError(data.message);
-        break;
-      case "roomCreated":
-        setCurrentRoomId(data.roomId);
-        addSystemMessage(`Created room ${data.roomId}`);
-        console.log("Room created successfully:", data.roomId);
-        break;
-      case "roomJoined":
-        setCurrentRoomId(data.roomId);
-        addSystemMessage(`Joined room ${data.roomId}`);
-        console.log("Room joined successfully:", data.roomId);
-        break;
-      default:
-        console.log("Unknown WebSocket message type:", data);
-    }
-  };
-
-  // Add system message to chat
-  const addSystemMessage = (text) => {
-    setChatMessages((prev) => [
-      ...prev,
-      { type: "system", text, timestamp: Date.now() },
-    ]);
-  };
-
-  // Create a new chat room
-  const createRoom = useCallback(() => {
-    if (!socket || !isConnected) {
-      handleError("Not connected to the server");
-      return;
-    }
-    const roomId = createRoomInput.trim() || `room-${Date.now()}`;
-    socket.send(JSON.stringify({ type: "createRoom", roomId }));
-    setCreateRoomInput("");
-    console.log("Sent createRoom request:", { roomId });
-  }, [socket, isConnected, createRoomInput]);
-
-  // Join an existing chat room
-  const joinRoom = useCallback(() => {
-    if (!socket || !isConnected) {
-      handleError("Not connected to the server");
-      return;
-    }
-    if (!joinRoomInput.trim()) {
-      handleError("Room ID cannot be empty");
-      return;
-    }
-    const roomId = joinRoomInput.trim();
-    socket.send(JSON.stringify({ type: "joinRoom", roomId }));
-    setJoinRoomInput("");
-    console.log("Sent joinRoom request:", { roomId });
-  }, [socket, isConnected, joinRoomInput]);
-
-  // Leave the current chat room
-  const leaveRoom = useCallback(() => {
-    if (!socket || !isConnected || !currentRoomId) {
-      handleError("Not connected or no room to leave");
-      return;
-    }
-    socket.send(JSON.stringify({ type: "leaveRoom", roomId: currentRoomId }));
-    setCurrentRoomId("");
-    setChatMessages([]);
-    addSystemMessage(`Left room ${currentRoomId}`);
-    console.log("Sent leaveRoom request:", { roomId: currentRoomId });
-  }, [socket, isConnected, currentRoomId]);
-
-  // Send a chat message
-  const handleSendMessage = useCallback(() => {
-    if (!socket || !isConnected || !currentRoomId) {
-      handleError("Not connected or no room selected");
-      return;
-    }
-    if (!chatInput.trim()) return;
-
-    const message = {
-      type: "sendMessage",
-      roomId: currentRoomId,
-      content: chatInput,
-      clientId: clientId.current,
-      from: from, // Include sender's language
-      timestamp: Date.now(),
-    };
-    socket.send(JSON.stringify(message));
-    // Add the sender's message directly to chatMessages without translation
-    setChatMessages((prev) => [
-      ...prev,
-      {
-        type: "message",
-        content: chatInput,
-        clientId: clientId.current,
-        roomId: currentRoomId,
-        timestamp: message.timestamp,
-        from,
-        to: from, // Sender sees their own language
-        id: message.timestamp,
-        originalText: chatInput,
-        error: null,
-      },
-    ]);
-    setChatInput("");
-    console.log("Sent message:", message);
-  }, [socket, isConnected, currentRoomId, chatInput, from]);
-
-  // Handle language change for a message
   const handleLanguageChange = useCallback(
-    async (msgId, newFrom, newTo) => {
-      const message = chatMessages.find((msg) => msg.id === msgId);
-      if (!message || message.type !== "message") return;
+    async (speaker, msgId, newFrom, newTo, setChatHistory, otherSetChatHistory, fromLang, toLang) => {
+      const history = speaker === "A" ? chatHistoryA : chatHistoryB;
+      const message = history.find((msg) => msg.id === msgId);
+      if (!message) return;
 
-      const originalText = message.originalText;
-      const from = newFrom || message.from;
-      const to = newTo || message.to;
+      let originalText;
+      let sourceFrom = newFrom || message.from;
+      let targetTo = newTo || message.to;
+
+      if (message.type === "user") {
+        originalText = message.text;
+      } else {
+        const original = history.find((m) => m.id === message.originalId);
+        if (!original) return;
+        originalText = original.text;
+        sourceFrom = newFrom || original.from;
+      }
 
       try {
         const response = await axios.post(
           `${backendURL}/translate/`,
-          { text: originalText, from, to },
+          { text: originalText, from: sourceFrom, to: targetTo },
           { headers: { "Content-Type": "application/json" } }
         );
         const translated = response.data.translatedText;
 
-        setChatMessages((prev) =>
+        setChatHistory((prev) => {
+          let updatedHistory = prev.map((msg) => {
+            if (msg.id === msgId) {
+              return {
+                ...msg,
+                from: sourceFrom,
+                to: targetTo,
+                text: msg.type === "user" ? msg.text : translated,
+                error: translated.startsWith("Error:") ? translated.replace("Error: ", "") : null,
+              };
+            }
+            if (msg.type === "translated" && msg.originalId === msgId && msg.type === "user") {
+              return {
+                ...msg,
+                text: translated,
+                from: sourceFrom,
+                to: targetTo,
+                error: translated.startsWith("Error:") ? translated.replace("Error: ", "") : null,
+              };
+            }
+            return msg;
+          });
+          return updatedHistory;
+        });
+
+        otherSetChatHistory((prev) => {
+          let updatedHistory = prev.map((msg) => {
+            if (msg.id === msgId || (msg.type === "translated" && msg.originalId === msgId)) {
+              return {
+                ...msg,
+                from: sourceFrom,
+                to: targetTo,
+                text: msg.type === "user" ? msg.text : translated,
+                error: translated.startsWith("Error:") ? translated.replace("Error: ", "") : null,
+              };
+            }
+            return msg;
+          });
+          return updatedHistory;
+        });
+      } catch (error) {
+        setChatHistory((prev) =>
           prev.map((msg) =>
             msg.id === msgId
               ? {
                   ...msg,
-                  from,
-                  to,
-                  content: translated,
-                  error: translated.startsWith("Error:") ? translated.replace("Error: ", "") : null,
+                  text: `Error: ${error.message}`,
+                  error: error.message,
                 }
               : msg
           )
         );
-      } catch (error) {
-        setChatMessages((prev) =>
+        otherSetChatHistory((prev) =>
           prev.map((msg) =>
-            msg.id === msgId
-              ? { ...msg, from, to, content: `Error: ${error.message}`, error: error.message }
+            msg.id === msgId || (msg.type === "translated" && msg.originalId === msgId)
+              ? {
+                  ...msg,
+                  text: `Error: ${error.message}`,
+                  error: error.message,
+                }
               : msg
           )
         );
       }
     },
-    [chatMessages]
+    [chatHistoryA, chatHistoryB]
   );
-
-  // Handle manual language selection
-  const handleManualFromChange = (e) => {
-    setFrom(e.target.value);
-    setIsLanguageManuallySet(true);
-  };
-
-  const handleManualToChange = (e) => {
-    setTo(e.target.value);
-    setIsLanguageManuallySet(true);
-  };
-
-  // Handle textarea key down to send message on Enter
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault(); // Prevent default Enter behavior (new line)
-      handleSendMessage();
-    }
-  };
-
-  // Handle microphone toggle with error handling
-  const handleMicrophoneToggle = () => {
-    try {
-      if (isListening) {
-        stopSpeechRecognition();
-      } else {
-        startSpeechRecognition();
-      }
-    } catch (err) {
-      setSpeechError(err.message || "Failed to toggle microphone");
-    }
-  };
 
   return (
     <div
-      ref={sidebarRef}
-      className={`fixed top-0 z-50 w-96 right-0 h-full bg-white shadow-lg transform transition-transform duration-300 p-4 ${
-        isOpen ? "translate-x-0" : "translate-x-full"
+      className={`min-h-screen transition-all duration-500 ${
+        theme === "light"
+          ? "bg-gradient-to-br from-purple-100 via-blue-50 to-indigo-100"
+          : "bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900"
       }`}
-      style={{ maxHeight: "100vh", overflowY: "auto", overflowX: "hidden" }}
-      aria-label="Live chat sidebar"
+      style={{ overflowY: "auto" }}
+      aria-label="Two-way communication"
     >
-      <div className="flex justify-between border rounded-md p-1 px-2 items-center mb-4">
-        <h2 className="text-xl font-semibold text-purple-800">Live Chat</h2>
-        <button
-          className="text-gray-600 p-1 rounded hover:bg-gray-300"
-          onClick={() => setIsOpen(false)}
-          aria-label="Close chat"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth="1.5"
-            stroke="currentColor"
-            className="size-6"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
-      </div>
-
-      {/* Error Display */}
-      <div className="text-red-500 text-sm mb-2">
-        {error && <div>{error}</div>}
-        {speechError && <div>{speechError}</div>}
-        {geoError && <div>{geoError}</div>}
-      </div>
-
-      <div className="flex border rounded-md bg-slate-100 flex-col h-[calc(100%-4rem)]">
-        {!currentRoomId ? (
-          <div className="p-4 space-y-4">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={createRoomInput}
-                onChange={(e) => setCreateRoomInput(e.target.value)}
-                placeholder="Enter Room ID (or leave blank)"
-                className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-800"
-                aria-label="Create room ID input"
-                disabled={!isConnected}
-              />
-              <button
-                onClick={createRoom}
-                className={`px-4 py-2 rounded-lg text-white ${
-                  !isConnected ? "bg-gray-400 cursor-not-allowed" : "bg-purple-800 hover:bg-purple-900"
-                }`}
-                aria-label="Create room"
-                disabled={!isConnected}
+      <header className="p-6 border-b backdrop-blur-sm border-white/20">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              className="inline-flex items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent h-10 w-10 hover:bg-gray-300 dark:hover:bg-gray-900 rounded-full text-gray-700 dark:hover:text-white"
+              onClick={() => window.history.back()}
+              aria-label="Go back"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div className="flex items-center gap-2">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-6 w-6 text-purple-500"
               >
-                Create
-              </button>
-            </div>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={joinRoomInput}
-                onChange={(e) => setJoinRoomInput(e.target.value)}
-                placeholder="Enter Room ID to Join"
-                className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-800"
-                aria-label="Join room ID input"
-                disabled={!isConnected}
-              />
-              <button
-                onClick={joinRoom}
-                className={`px-4 py-2 rounded-lg text-white ${
-                  !isConnected ? "bg-gray-400 cursor-not-allowed" : "bg-purple-800 hover:bg-purple-900"
-                }`}
-                aria-label="Join room"
-                disabled={!isConnected}
-              >
-                Join
-              </button>
-            </div>
-            <div className="text-sm">
-              {isConnected ? (
-                <span className="text-green-500">Connected to server</span>
-              ) : (
-                <span className="text-yellow-500">
-                  {reconnectAttempts.current > 0
-                    ? `Reconnecting... (Attempt ${reconnectAttempts.current})`
-                    : "Connecting to server..."}
-                </span>
-              )}
+                <path d="m4 6 3-3 3 3"></path>
+                <path d="M7 17V3"></path>
+                <path d="m14 6 3-3 3 3"></path>
+                <path d="M17 17V3"></path>
+                <path d="M4 21h16"></path>
+              </svg>
+              <h1 className={`text-xl font-bold ${theme === "light" ? "text-gray-900" : "text-white"}`}>
+                Two-Way Communication
+              </h1>
             </div>
           </div>
-        ) : (
-          <>
-            <div className="p-2 bg-gray-100 pb-4 rounded-t-md flex justify-between items-center">
-              <p className="text-sm text-gray-600">Room ID: {currentRoomId}</p>
+          <button
+            className="inline-flex items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:text-accent-foreground h-10 w-10 rounded-full transition-all duration-300 hover:scale-110 bg-gray-200 hover:bg-gray-300 text-gray-900 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300"
+            onClick={toggleTheme}
+            aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+          >
+            {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+          </button>
+        </div>
+      </header>
+
+      {(geoErrorA || speechErrorA || geoErrorB || speechErrorB) && (
+        <div className="text-red-500 text-sm p-6 max-w-6xl mx-auto">
+          {geoErrorA || speechErrorA || geoErrorB || speechErrorB}
+        </div>
+      )}
+
+      <main className="p-6">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 h-[calc(100vh-200px)]">
+          {/* Speaker A Panel */}
+          <div className="p-6 rounded-2xl backdrop-blur-sm border bg-white/40 border-white/50">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center">
+                  <Users className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg text-gray-900">Speaker A</h3>
+                  <select
+                    value={fromA}
+                    onChange={(e) => setFromA(e.target.value)}
+                    className={`text-sm p-1 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${theme === "light" ? "bg-white/70 text-gray-900" : "bg-gray-800/50 text-white border-gray-600"}`}
+                    aria-label="Select Speaker A language"
+                  >
+                    {languages.map((lang) => (
+                      <option key={lang.code} value={lang.code}>
+                        {lang.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
               <button
-                onClick={leaveRoom}
-                className="p-1 text-red-600 rounded hover:bg-red-100"
-                aria-label="Leave room"
-                title="Leave Room"
+                className={`inline-flex items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 w-16 h-16 rounded-full transition-all duration-300 hover:scale-105 ${
+                  isListeningA ? "bg-red-600 hover:bg-red-700" : "bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
+                } text-white shadow-lg`}
+                onClick={() => (isListeningA ? stopSpeechA() : startSpeechA())}
+                aria-label={isListeningA ? "Stop microphone" : "Start microphone"}
               >
-                <LogOut size={20} />
+                {isListeningA ? <Mic className="h-6 w-6" /> : <MicOff className="h-6 w-6" />}
               </button>
             </div>
             <div
-              ref={chatContainerRef}
-              className="flex-1 overflow-y-auto p-2 space-y-4"
+              ref={chatContainerRefA}
+              className="space-y-4 h-96 overflow-y-auto"
             >
-              {chatMessages.length === 0 ? (
+              {chatHistoryA.length === 0 ? (
                 <p className="text-gray-500 text-center">Start chatting...</p>
               ) : (
-                chatMessages.map((msg) => {
-                  const isMyMessage = msg.type === "message" && msg.clientId === clientId.current;
-                  return (
-                    <div
-                      key={msg.timestamp} // Use timestamp as key for both system and user messages
-                      className={`flex ${isMyMessage ? "justify-end" : "justify-start"}`}
-                    >
-                      <div className="max-w-[80%]">
-                        {msg.type === "system" ? (
-                          <p className="text-xs text-gray-500 italic text-center">{msg.text}</p>
-                        ) : (
-                          <div>
-                            <div className="text-xs text-gray-600 mb-1">
-                              {isMyMessage ? (
-                                <select
-                                  id={`from-${msg.id}`}
-                                  value={msg.from}
-                                  onChange={(e) => {
-                                    handleLanguageChange(msg.id, e.target.value, null);
-                                    handleManualFromChange(e);
-                                  }}
-                                  className="w-full max-w-[150px] p-1 border rounded-lg focus:outline-none text-xs"
-                                >
-                                  {languages.map((lang) => (
-                                    <option key={lang.code} value={lang.code}>
-                                      {lang.name}
-                                    </option>
-                                  ))}
-                                </select>
-                              ) : (
-                                <select
-                                  id={`to-${msg.id}`}
-                                  value={msg.to}
-                                  onChange={(e) => {
-                                    handleLanguageChange(msg.id, null, e.target.value);
-                                    handleManualToChange(e);
-                                  }}
-                                  className="w-full max-w-[150px] p-1 border rounded-lg focus:outline-none text-xs"
-                                >
-                                  {languages.map((lang) => (
-                                    <option key={lang.code} value={lang.code}>
-                                      {lang.name}
-                                    </option>
-                                  ))}
-                                </select>
-                              )}
-                            </div>
-                            <div
-                              className={`px-2 py-1 rounded-lg ${
-                                isMyMessage
-                                  ? "bg-purple-100 text-purple-900"
-                                  : "bg-slate-200 text-gray-900"
-                              }`}
-                            >
-                              {msg.content}
-                            </div>
-                          </div>
-                        )}
+                chatHistoryA.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex ${msg.type === "user" ? "justify-start" : "justify-end"}`}
+                  >
+                    <div className="max-w-[80%]">
+                      <div
+                        className={`px-3 py-2 rounded-lg text-sm ${
+                          msg.type === "user"
+                            ? "bg-blue-600/80 text-white"
+                            : theme === "light"
+                            ? "bg-white/70 text-gray-900"
+                            : "bg-white/10 text-gray-200"
+                        }`}
+                      >
+                        {msg.text}
                       </div>
                     </div>
-                  );
-                })
+                  </div>
+                ))
               )}
             </div>
-            <div className="p-2 border-t">
-              <div className="flex items-start gap-2">
-                <textarea
-                  ref={textareaRef}
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-800 resize-none"
-                  placeholder="Type your message..."
-                  style={{ height: inputHeight, overflowWrap: "break-word", whiteSpace: "pre-wrap" }}
-                  aria-label="Chat input"
-                />
-                {chatInput && (
-                  <button
-                    onClick={() => setChatInput("")}
-                    className="text-gray-500 hover:text-gray-900 mt-2"
-                    aria-label="Clear input"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth="1.5"
-                      stroke="currentColor"
-                      className="w-6 h-6"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-              <div className="flex justify-between mt-2">
-                <button
-                  onClick={handleMicrophoneToggle}
-                  className={`p-2 rounded-lg text-white ${
-                    isListening ? "bg-red-600 hover:bg-red-700" : "bg-purple-800 hover:bg-purple-900"
-                  }`}
-                  aria-label={isListening ? "Stop microphone" : "Start microphone"}
-                >
-                  {isListening ? <Mic size={20} /> : <MicOff size={20} />}
-                </button>
-                <button
-                  onClick={handleSendMessage}
-                  className="p-2 bg-purple-800 text-white rounded-lg hover:bg-purple-900"
-                  aria-label="Send message"
-                >
-                  <IoMdSend size={20} />
-                </button>
-              </div>
+            <div className="mt-4">
+              <textarea
+                ref={textareaRefA}
+                value={inputA}
+                onChange={(e) => setInputA(e.target.value)}
+                placeholder="Type your message..."
+                className={`w-full rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[60px] border-0 resize-none ${
+                  theme === "light" ? "bg-white/70 text-gray-900 placeholder:text-gray-500" : "bg-gray-800/50 text-white placeholder:text-gray-400"
+                }`}
+                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSendMessage("A", inputA, fromA, toB, setChatHistoryA, setChatHistoryB), setInputA(""))}
+                aria-label="Speaker A input"
+              />
             </div>
-          </>
-        )}
-      </div>
+          </div>
+
+          {/* Speaker B Panel */}
+          <div className="p-6 rounded-2xl backdrop-blur-sm border bg-white/40 border-white/50">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                  <Users className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg text-gray-900">Speaker B</h3>
+                  <select
+                    value={fromB}
+                    onChange={(e) => setFromB(e.target.value)}
+                    className={`text-sm p-1 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${theme === "light" ? "bg-white/70 text-gray-900" : "bg-gray-800/50 text-white border-gray-600"}`}
+                    aria-label="Select Speaker B language"
+                  >
+                    {languages.map((lang) => (
+                      <option key={lang.code} value={lang.code}>
+                        {lang.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <button
+                className={`inline-flex items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 w-16 h-16 rounded-full transition-all duration-300 hover:scale-105 ${
+                  isListeningB ? "bg-red-600 hover:bg-red-700" : "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                } text-white shadow-lg`}
+                onClick={() => (isListeningB ? stopSpeechB() : startSpeechB())}
+                aria-label={isListeningB ? "Stop microphone" : "Start microphone"}
+              >
+                {isListeningB ? <Mic className="h-6 w-6" /> : <MicOff className="h-6 w-6" />}
+              </button>
+            </div>
+            <div
+              ref={chatContainerRefB}
+              className="space-y-4 h-96 overflow-y-auto"
+            >
+              {chatHistoryB.length === 0 ? (
+                <p className="text-gray-500 text-center">Start chatting...</p>
+              ) : (
+                chatHistoryB.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex ${msg.type === "user" ? "justify-start" : "justify-end"}`}
+                  >
+                    <div className="max-w-[80%]">
+                      <div
+                        className={`px-3 py-2 rounded-lg text-sm ${
+                          msg.type === "user"
+                            ? "bg-purple-600/80 text-white"
+                            : theme === "light"
+                            ? "bg-white/70 text-gray-900"
+                            : "bg-white/10 text-gray-200"
+                        }`}
+                      >
+                        {msg.text}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="mt-4">
+              <textarea
+                ref={textareaRefB}
+                value={inputB}
+                onChange={(e) => setInputB(e.target.value)}
+                placeholder="Type your message..."
+                className={`w-full rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 min-h-[60px] border-0 resize-none ${
+                  theme === "light" ? "bg-white/70 text-gray-900 placeholder:text-gray-500" : "bg-gray-800/50 text-white placeholder:text-gray-400"
+                }`}
+                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSendMessage("B", inputB, fromB, toA, setChatHistoryB, setChatHistoryA), setInputB(""))}
+                aria-label="Speaker B input"
+              />
+            </div>
+          </div>
+        </div>
+
+      </main>
     </div>
   );
 };
 
-export default LiveChatSidebar;
+export default TwoWayCommunication;

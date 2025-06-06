@@ -3,19 +3,15 @@ import { ArrowLeftRight, Settings, Crown, UserCheck } from "lucide-react";
 import Tesseract from "tesseract.js";
 import { LanguageSelector } from "../components/LanguageSelector";
 import { useGeolocation } from "../components/languagebylocation";
-import LiveChatSidebar from "../components/LiveChatbar";
 import ErrorMessage from "../components/ErrorMessage";
 import TextInput from "../components/TextInput";
 import TextOutput from "../components/TextOutput";
-import HistorySidebar from "../components/HistorySidebar";
-import ChatSidebar from "../components/ChatSidebar";
 import HomeSetting from "../components/HomeSetting";
 import { useTranslation } from "../components/useTranslation";
 import { useSpeech } from "../components/UseSpeech";
 import { useTheme } from "../context/ThemeContext";
 import SignIn from "./Login";
 import SignUp from "./Signup";
-import { Navigate } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 
 
@@ -169,11 +165,12 @@ const Translator = () => {
       setTimeout(() => setLoginWarning(""), 3000);
       return;
     }
+    navigate("/history")
     setIsChatOpen(false);
     setIsLiveChatOpen(false);
     setIsSettingsOpen(false);
     setIsHistoryOpen((prev) => !prev);
-  }, []);
+  }, [navigate]);
 
   
   const handleChatClick = useCallback(() => {
@@ -185,11 +182,12 @@ const Translator = () => {
   }, [navigate]);
 
   const handleLiveChatClick = useCallback(() => {
+    navigate("/conversation")
     setIsHistoryOpen(false);
     setIsChatOpen(false);
     setIsSettingsOpen(false);
     setIsLiveChatOpen((prev) => !prev);
-  }, []);
+  }, [navigate]);
 
   const handleSettingsClick = useCallback(() => {
     setIsHistoryOpen(false);
@@ -736,34 +734,21 @@ const Translator = () => {
                 </div>
               </div>
             </div>
-            <div className="mt-4 backdrop-blur-md rounded-2xl sm:rounded-3xl border-2 p-4 sm:p-6 lg:p-8 shadow-2xl bg-gradient-to-r from-white/60 via-purple-50/70 to-blue-50/60 dark:from-gray-800/60 dark:via-gray-900/70 dark:to-gray-800/60 border-purple-200/50 dark:border-gray-700/50">
-              <h3 className="font-bold mb-4 sm:mb-5 lg:mb-6 flex items-center gap-2 sm:gap-3 text-lg sm:text-xl lg:text-xl text-gray-800 dark:text-gray-200">
-                <span className="text-xl sm:text-2xl lg:text-2xl">⭐</span>
-                Quick Access Languages
-                <span className="text-purple-400 dark:text-purple-300 text-xs sm:text-sm lg:text-sm">(Premium Feature)</span>
-              </h3>
-              <div className="flex flex-wrap gap-2 sm:gap-3 lg:gap-4">
-                <button className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 lg:px-6 py-3 sm:py-3.5 lg:py-4 rounded-2xl border-2 transition-all duration-500 hover:scale-110 hover:shadow-xl transform-gpu bg-white/60 dark:bg-gray-800/60 hover:bg-white/80 dark:hover:bg-gray-700/80 border-white/40 dark:border-gray-700/40 text-gray-800 dark:text-gray-200">
-                  <span className="text-lg sm:text-xl lg:text-2xl">🇺🇸</span>
-                  <span className="font-bold text-sm sm:text-base lg:text-lg">English</span>
-                </button>
-                <button className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 lg:px-6 py-3 sm:py-3.5 lg:py-4 rounded-2xl border-2 transition-all duration-500 hover:scale-110 hover:shadow-xl transform-gpu bg-gradient-to-r from-purple-200/80 to-blue-200/80 dark:from-purple-800/80 dark:to-blue-800/80 border-purple-400/60 dark:border-purple-600/60 text-purple-700 dark:text-purple-200 shadow-lg">
-                  <span className="text-lg sm:text-xl lg:text-2xl">🇪🇸</span>
-                  <span className="font-bold text-sm sm:text-base lg:text-lg">Spanish</span>
-                </button>
-                <button className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 lg:px-6 py-3 sm:py-3.5 lg:py-4 rounded-2xl border-2 transition-all duration-500 hover:scale-110 hover:shadow-xl transform-gpu bg-white/60 dark:bg-gray-800/60 hover:bg-white/80 dark:hover:bg-gray-700/80 border-white/40 dark:border-gray-700/40 text-gray-800 dark:text-gray-200">
-                  <span className="text-lg sm:text-xl lg:text-2xl">🇫🇷</span>
-                  <span className="font-bold text-sm sm:text-base lg:text-lg">French</span>
-                </button>
-              </div>
-            </div>
+            
           </div>
         </main>
         <div className="fixed bottom-4 sm:bottom-5 lg:bottom-6 left-1/2 transform -translate-x-1/2 z-30">
           <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 p-3 sm:p-3.5 lg:p-4 rounded-lg sm:rounded-2xl backdrop-blur-md border-2 shadow-lg items-center bg-white/90 dark:bg-gray-800/90 border-gray-200/60 dark:border-gray-700/60 lg:border-purple-200/60 dark:lg:border-purple-600/60">
+            <button className="inline-flex items-center justify-center rounded-lg sm:rounded-2xl transition-all duration-500 hover:scale-125 w-12 h-12 sm:w-13 sm:h-13 lg:w-14 lg:h-14 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 dark:from-purple-500 dark:to-indigo-500 text-white shadow-lg border-2 border-purple-400/50 dark:border-purple-600/50" 
+            aria-label="Home page">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 21v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21m0 0h4.5V3.545M12.75 21h7.5V10.75M2.25 21h1.5m18 0h-18M2.25 9l4.5-1.636M18.75 3l-1.5.545m0 6.205 3 1m1.5.5-1.5-.5M6.75 7.364V3h-3v18m3-13.636 10.5-3.819" />
+            </svg>
+
+            </button>
             <button
               onClick={handleChatClick}
-              className="inline-flex items-center justify-center rounded-lg sm:rounded-2xl transition-all duration-500 hover:scale-125 w-12 h-12 sm:w-13 sm:h-13 lg:w-14 lg:h-14 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 dark:from-purple-500 dark:to-indigo-500 text-white shadow-lg border-2 border-purple-400/50 dark:border-purple-600/50"
+              className="inline-flex items-center justify-center rounded-lg sm:rounded-2xl transition-all duration-500 hover:scale-125 w-12 h-12 sm:w-13 sm:h-13 lg:w-14 lg:h-14 text-purple-600 dark:text-purple-300 hover:text-purple-700 dark:hover:text-purple-400 hover:bg-purple-100/60 dark:hover:bg-purple-900/60 border-2 border-gray-300/40 dark:border-gray-600/40 lg:border-purple-300/40 dark:lg:border-purple-600/40"
               aria-label={isChatOpen ? "Close chat" : "Open chat"}
             >
               <svg
@@ -786,22 +771,12 @@ const Translator = () => {
               className="inline-flex items-center justify-center rounded-lg sm:rounded-2xl transition-all duration-500 hover:scale-125 w-12 h-12 sm:w-13 sm:h-13 lg:w-14 lg:h-14 text-purple-600 dark:text-purple-300 hover:text-purple-700 dark:hover:text-purple-400 hover:bg-purple-100/60 dark:hover:bg-purple-900/60 border-2 border-gray-300/40 dark:border-gray-600/40 lg:border-purple-300/40 dark:lg:border-purple-600/40"
               aria-label={isLiveChatOpen ? "Close live chat" : "Open live chat"}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-5 w-5 sm:h-5.5 sm:w-5.5 lg:h-6 lg:w-6"
-              >
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-                <circle cx="9" cy="7" r="4"></circle>
-                <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 text-purple-500">
+              <path d="m4 6 3-3 3 3"></path>
+              <path d="M7 17V3"></path>
+              <path d="m14 6 3-3 3 3"></path>
+              <path d="M17 17V3"></path>
+              <path d="M4 21h16"></path>
               </svg>
             </button>
             <button
@@ -838,9 +813,6 @@ const Translator = () => {
             <span className="text-lg sm:text-xl sm:text-2xl">🚖</span>
           </div>
         </footer>
-        <HistorySidebar isOpen={isHistoryOpen} setIsOpen={setIsHistoryOpen} history={history} setHistory={setHistory} />
-        <ChatSidebar isOpen={isChatOpen} setIsOpen={setIsChatOpen} />
-        <LiveChatSidebar isOpen={isLiveChatOpen} setIsOpen={setIsLiveChatOpen} from={from} to={to} />
         <HomeSetting isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
         {isSignInOpen && (
           <div

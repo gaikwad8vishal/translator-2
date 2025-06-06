@@ -7,7 +7,8 @@ import { ThemeProvider } from "./context/ThemeContext";
 import { useNavigate } from "react-router-dom";
 import React, { useEffect } from "react";
 import ChatSidebar from "./components/ChatSidebar";
-import LiveChatSidebar from "./components/LiveChatbar";
+import TwoWayCommunication from "./components/LiveChatbar";
+import TranslationHistory from "./components/HistorySidebar";
 
 function App() {
   return (
@@ -19,7 +20,8 @@ function App() {
               <Routes>
                 <Route path="/" element={<Translator />} />
                 <Route path="/single-device" element={<ChatSidebar />} />
-                <Route path="/conversation" element={<LiveChatSidebar />} />
+                <Route path="/conversation" element={<TwoWayCommunication />} />
+                <Route path="/history" element={<TranslationHistory />} />
                 <Route
                   path="/signin"
                   element={
