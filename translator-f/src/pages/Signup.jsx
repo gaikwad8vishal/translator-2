@@ -11,7 +11,7 @@ const SignUp = () => {
 
   const navigate = useNavigate();
 
-  const backendURL = import.meta.env.VITE_BACKEND_URL;
+  const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
 
 
   const handleSignUp = async (e) => {

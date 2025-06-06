@@ -6,7 +6,7 @@ import { languages } from "../components/constants";
 import { useGeolocation } from "../components/languagebylocation";
 import { useSpeech } from "../components/UseSpeech";
 
-const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:30001";
 
 const ChatSidebar = ({ isOpen, setIsOpen }) => {
   const [chatHistory, setChatHistory] = useState([]);

@@ -14,7 +14,7 @@ import ChatSidebar from "../components/ChatSidebar";
 import { useTranslation } from "../components/useTranslation";
 import { useSpeech } from "../components/UseSpeech";
 
-const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
 
 const Translator = () => {
   const [text, setText] = useState("");

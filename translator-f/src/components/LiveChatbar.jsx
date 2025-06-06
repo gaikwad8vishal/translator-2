@@ -6,8 +6,8 @@ import { useGeolocation } from "../components/languagebylocation";
 import useSpeech from "../pages/Home";
 
 // Use environment variable for WebSocket and Backend URL
-const socketURL = import.meta.env.VITE_WEBSOCKET_URL || "wss://translator-2-2.onrender.com";
-const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
+const socketURL = import.meta.env.VITE_WEBSOCKET_URL || "ws://localhost:8080";
+const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
 
 // Available languages for translation
 const languages = [

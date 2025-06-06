@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 
 
-const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
 
 
 
