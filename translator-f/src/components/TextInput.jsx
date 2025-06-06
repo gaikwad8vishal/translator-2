@@ -56,8 +56,12 @@ const TextInput = ({
           ref={textareaRef}
           value={value}
           onChange={(e) => !isUploading && onChange(e.target.value)}
-          className={`flex w-full px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-[250px] resize-none rounded-2xl focus:ring-2 focus:ring-purple-500/50 transition-all duration-300 border-2 pr-16 text-gray-900 placeholder:text-gray-500 ${
-            isUploading ? "opacity-50 cursor-not-allowed bg-white/90" : isListening ? "animate-pulse-full border-red-500" : "bg-white/90 border-purple-200/50"
+          className={`flex w-full px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 dark:focus-visible:ring-purple-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-[250px] resize-none rounded-2xl focus:ring-2 focus:ring-purple-500/50 dark:focus:ring-purple-400/50 transition-all duration-300 border-2 pr-16 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 ${
+            isUploading
+              ? "opacity-50 cursor-not-allowed bg-white/90 dark:bg-gray-800/90"
+              : isListening
+              ? "animate-pulse-full border-red-500 dark:border-red-400"
+              : "bg-white/90 dark:bg-gray-800/90 border-purple-200/50 dark:border-purple-600/50"
           }`}
           placeholder={
             isUploading
@@ -69,9 +73,9 @@ const TextInput = ({
           disabled={isUploading}
         />
         {isUploading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75">
+          <div className="absolute inset-0 flex items-center justify-center bg-white/75 dark:bg-gray-800/75">
             <svg
-              className="animate-spin h-5 w-5 text-purple-600 mr-2"
+              className="animate-spin h-5 w-5 text-purple-600 dark:text-purple-300 mr-2"
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
@@ -90,13 +94,13 @@ const TextInput = ({
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
               />
             </svg>
-            <span className="text-gray-500">Loading...</span>
+            <span className="text-gray-500 dark:text-gray-400">Loading...</span>
           </div>
         )}
         {value && !isUploading && (
           <button
             onClick={() => onChange("")}
-            className="absolute top-2 right-4 text-gray-500 hover:text-gray-900"
+            className="absolute top-2 right-4 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
             aria-label="Clear input"
             disabled={isUploading}
           >
@@ -107,7 +111,7 @@ const TextInput = ({
           <div className="flex gap-2">
             <button
               onClick={onMicrophoneToggle}
-              className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:size-shrink-0 hover:bg-accent hover:text-accent-foreground h-9 px-3 transition-all duration-300 border-2 rounded-xl border-purple-300/60 text-purple-700 hover:bg-purple-100/60"
+              className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 dark:focus-visible:ring-purple-400 focus-visible:ring-offset-2 disabled:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:size-shrink-0 h-9 px-3 transition-all duration-300 border-2 rounded-xl border-purple-300/60 dark:border-purple-600/60 text-purple-700 dark:text-purple-300 hover:bg-purple-100/60 dark:hover:bg-purple-900/60 hover:text-purple-800 dark:hover:text-purple-200"
               aria-label={isListening ? "Stop microphone" : "Start microphone"}
               disabled={isUploading}
             >
@@ -119,7 +123,7 @@ const TextInput = ({
             </button>
             <button
               onClick={onSpeak}
-              className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent hover:text-accent-foreground  h-9 px-3 transition-all duration-300 border-2 rounded-xl border-purple-300/60 text-purple-700 hover:bg-purple-100/60"
+              className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 dark:focus-visible:ring-purple-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-9 px-3 transition-all duration-300 border-2 rounded-xl border-purple-300/60 dark:border-purple-600/60 text-purple-700 dark:text-purple-300 hover:bg-purple-100/60 dark:hover:bg-purple-900/60 hover:text-purple-800 dark:hover:text-purple-200"
               aria-label="Speak input text"
               disabled={isUploading}
             >
@@ -128,7 +132,7 @@ const TextInput = ({
             <div className="relative">
               <button
                 onClick={() => setIsUploadMenuOpen(!isUploadMenuOpen)}
-                className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent hover:text-accent-foreground h-9 px-3 transition-all duration-300 border-2 rounded-xl border-blue-300/60 text-blue-700 hover:bg-blue-100/60"
+                className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 dark:focus-visible:ring-purple-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-9 px-3 transition-all duration-300 border-2 rounded-xl border-blue-300/60 dark:border-blue-600/60 text-blue-700 dark:text-blue-300 hover:bg-blue-100/60 dark:hover:bg-blue-900/60 hover:text-blue-800 dark:hover:text-blue-200"
                 aria-label={isUploadMenuOpen ? "Close upload menu" : "Open upload menu"}
                 disabled={isUploading}
               >
@@ -139,11 +143,11 @@ const TextInput = ({
                 )}
               </button>
               {isUploadMenuOpen && (
-                <div className="absolute bottom-full right-0 mb-2 p-2 rounded-xl border-2 shadow-xl backdrop-blur-xl z-10 bg-white/95 border-gray-200">
+                <div className="absolute bottom-full right-0 mb-2 p-2 rounded-xl border-2 shadow-xl backdrop-blur-xl z-10 bg-white/95 dark:bg-gray-800/95 border-gray-200/60 dark:border-gray-700/60">
                   <div className="flex flex-col gap-1 w-40">
                     <label className="relative">
                       <button
-                        className="inline-flex items-center gap-2 whitespace-nowrap font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent hover:text-accent-foreground h-9 rounded-md px-3 justify-start text-xs w-full text-left"
+                        className="inline-flex items-center gap-2 whitespace-nowrap font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 dark:focus-visible:ring-purple-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-9 rounded-md px-3 justify-start text-xs w-full text-left text-gray-800 dark:text-gray-200 hover:bg-purple-100/60 dark:hover:bg-purple-900/60"
                         disabled={isUploading}
                       >
                         <Image className="h-3 w-3 mr-2" />
@@ -159,7 +163,7 @@ const TextInput = ({
                       />
                     </label>
                     <button
-                      className="inline-flex items-center gap-2 whitespace-nowrap font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent hover:text-accent-foreground h-9 rounded-md px-3 justify-start text-xs"
+                      className="inline-flex items-center gap-2 whitespace-nowrap font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 dark:focus-visible:ring-purple-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-9 rounded-md px-3 justify-start text-xs text-gray-800 dark:text-gray-200 hover:bg-purple-100/60 dark:hover:bg-purple-900/60"
                       disabled={true}
                       title="Take Photo is a premium feature"
                     >
@@ -168,7 +172,7 @@ const TextInput = ({
                     </button>
                     <label className="relative">
                       <button
-                        className="inline-flex items-center gap-2 whitespace-nowrap font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent hover:text-accent-foreground h-9 rounded-md px-3 justify-start text-xs w-full text-left"
+                        className="inline-flex items-center gap-2 whitespace-nowrap font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 dark:focus-visible:ring-purple-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-9 rounded-md px-3 justify-start text-xs w-full text-left text-gray-800 dark:text-gray-200 hover:bg-purple-100/60 dark:hover:bg-purple-900/60"
                         disabled={isUploading}
                       >
                         <FileText className="h-3 w-3 mr-2" />

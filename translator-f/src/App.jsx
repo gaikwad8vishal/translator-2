@@ -3,7 +3,7 @@ import SignIn from "./pages/Login";
 import SignUp from "./pages/Signup";
 import { AuthProvider } from "./utils/api";
 import Translator from "./pages/Home";
-import { ThemeProvider } from "./components/Therechanger";
+import { ThemeProvider } from "./context/ThemeContext";
 import { useNavigate } from "react-router-dom";
 import React, { useEffect } from "react";
 
@@ -13,7 +13,7 @@ function App() {
       <AuthProvider>
         <Router>
           <div className="flex flex-col min-h-screen">
-            <main className="flex-1 p-4">
+            <main className="flex-1 ">
               <Routes>
                 <Route path="/" element={<Translator />} />
                 <Route

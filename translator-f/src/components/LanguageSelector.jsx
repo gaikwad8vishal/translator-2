@@ -40,38 +40,38 @@ export const LanguageSelector = ({ selectedLang, onSelect, isOpen, setIsOpen, se
   };
 
   return (
-    <div className="flex-1">
+    <div className="flex-1 relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex items-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-auto p-4 justify-between backdrop-blur-sm border transition-all duration-300 rounded-xl min-w-[160px] hover:scale-105 shadow-lg bg-white/70 border-white/60 hover:bg-white/90 text-gray-800"
+        className="inline-flex w-64 md:w-72 items-center gap-2 sm:gap-3 whitespace-nowrap text-sm sm:text-base font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 dark:focus-visible:ring-purple-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 sm:[&_svg]:size-5 [&_svg]:shrink-0 h-auto p-3 sm:p-4 justify-between backdrop-blur-sm border-2 transition-all duration-300 rounded-xl sm:rounded-2xl min-w-[160px] sm:min-w-[180px] hover:scale-105 shadow-lg bg-white/70 dark:bg-gray-800/70 border-white/60 dark:border-gray-700/60 hover:bg-white/90 dark:hover:bg-gray-700/90 text-gray-800 dark:text-gray-200 hover:text-purple-700 dark:hover:text-purple-400"
         aria-label={`Select ${selectedLanguage.name} language`}
         type="button"
         aria-haspopup="menu"
         aria-expanded={isOpen}
         data-state={isOpen ? "open" : "closed"}
       >
-        <div className="flex items-center gap-3">
-          <span className="text-xl">{selectedLanguage.flag}</span>
-          <span className="font-medium">{selectedLanguage.name}</span>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <span className="text-base sm:text-lg lg:text-xl">{selectedLanguage.flag}</span>
+          <span className="font-medium text-xs sm:text-sm lg:text-base">{selectedLanguage.name}</span>
         </div>
         <ChevronDown
-          className={`h-4 w-4 text-gray-600 transition-transform duration-200 ${
+          className={`h-4 w-4 sm:h-5 sm:w-5 text-gray-600 dark:text-gray-400 transition-transform duration-200 ${
             isOpen ? "rotate-180" : "rotate-0"
           }`}
         />
       </button>
       {isOpen && (
-        <div className="absolute z-10 w-92 bg-white/90 border border-white/60 shadow-lg mt-1 backdrop-blur-sm">
+        <div className="absolute z-20 w-64 sm:w-72 bg-white/90 dark:bg-gray-800/90 border-2 border-white/60 dark:border-gray-700/60 shadow-xl mt-1 sm:mt-2 backdrop-blur-md rounded-xl sm:rounded-2xl overflow-hidden">
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search languages..."
-            className="w-full p-3 border-b border-white/60 focus:outline-none border bg-white/70 text-gray-800 placeholder:text-gray-500 text-sm"
+            className="w-full p-3 sm:p-4 border-b border-white/60 dark:border-gray-700/60 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 bg-white/70 dark:bg-gray-800/70 text-gray-800 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 text-sm sm:text-base"
             autoFocus
             aria-label="Search languages"
           />
-          <div className="max-h-40 overflow-y-auto">
+          <div className="max-h-40 sm:max-h-48 overflow-y-auto">
             {filteredLanguages.sort((a, b) => a.name.localeCompare(b.name)).map((lang) => (
               <div
                 key={lang.code}
@@ -80,15 +80,17 @@ export const LanguageSelector = ({ selectedLang, onSelect, isOpen, setIsOpen, se
                   setSearch("");
                   setIsOpen(false);
                 }}
-                className={`p-3 hover:bg-purple-100/60 cursor-pointer flex items-center gap-3 text-sm text-gray-800 ${
-                  selectedLang === lang.code ? "bg-purple-100/60" : ""
+                className={`p-3 sm:p-4 hover:bg-purple-100/60 dark:hover:bg-purple-900/60 cursor-pointer flex items-center gap-2 sm:gap-3 text-sm sm:text-base text-gray-800 dark:text-gray-200 transition-all duration-200 ${
+                  selectedLang === lang.code ? "bg-purple-100/60 dark:bg-purple-900/60" : ""
                 }`}
                 role="option"
                 aria-selected={selectedLang === lang.code}
               >
-                <span className="text-xl">{lang.flag}</span>
-                <span>{lang.name}</span>
-                {selectedLang === lang.code && <span className="ml-auto">🌐</span>}
+                <span className="text-base sm:text-lg lg:text-xl">{lang.flag}</span>
+                <span className="text-xs sm:text-sm lg:text-base">{lang.name}</span>
+                {selectedLang === lang.code && (
+                  <span className="ml-auto text-purple-600 dark:text-purple-300">🌐</span>
+                )}
               </div>
             ))}
           </div>
