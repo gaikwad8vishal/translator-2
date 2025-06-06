@@ -6,13 +6,13 @@ import { AuthProvider } from "./utils/api";
 import Translator from "./pages/Home";
 import AuthWatcher from "./components/authwatcher";
 import { ThemeProvider } from "./components/Therechanger";
+import HomeSetting from "./components/HomeSetting";
 
 function App() {
   return (
     <ThemeProvider>    
       <AuthProvider>
       <Router> 
-        <AuthWatcher /> 
         <div className="flex flex-col min-h-screen">
           <main className="flex-1 p-4">
             <Routes>

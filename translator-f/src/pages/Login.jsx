@@ -2,7 +2,8 @@ import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-const SignIn = () => {
+
+const SignIn = ({ onClose }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -15,95 +16,202 @@ const SignIn = () => {
   const handleSignIn = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
       setError("");
-      
       const response = await axios.post(`${backendURL}/users/signin`, {
         email,
         password,
       });
 
-      const { token, user } = response.data;
-
+      const { token, user, name } = response.data;
       localStorage.setItem("token", token);
+      localStorage.setItem("name", name);
       localStorage.setItem("user", JSON.stringify(user));
       navigate("/");
       setTimeout(() => {
         window.location.reload();
       }, 50);
-
-      setUser(user);
-      
     } catch (err) {
-      setTimeout(() => {}, 15)
       setError("Invalid email or password");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleHomeRedirect = () => {
-    navigate("/");
+  const handleClose = () => {
+    onClose();
+    navigate("/"); // Redirect to home when closing
   };
 
   return (
-    <div className="flex justify-center items-center mt-24 h-72 bg-gray-100">
-      <div className="bg-white p-6 rounded-lg shadow-lg w-96 relative">
-        <button
-          onClick={handleHomeRedirect}
-          className="absolute top-2 right-2 text-purple-600 hover:text-purple-800"
-          title="Go to Home"
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="w-full max-w-md p-6 bg-gradient-to-br from-white/95 via-purple-50/90 to-blue-50/95 border-2 border-purple-200/60 rounded-lg shadow-2xl backdrop-blur-xl animate-in fade-in-0 zoom-in-95 duration-200"
+      tabIndex={-1}
+    >
+      <button
+        type="button"
+        onClick={handleClose}
+        className="absolute right-4 top-4 rounded-sm text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 opacity-70 hover:opacity-100 transition-opacity"
+        aria-label="Close"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="h-4 w-4"
         >
+          <path d="M18 6 6 18" />
+          <path d="m6 6 12 12" />
+        </svg>
+      </button>
+      <div className="flex flex-col space-y-3 text-center">
+        <div className="mx-auto w-16 h-16 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-full flex items-center justify-center shadow-xl">
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6"
-            fill="none"
+            width="24"
+            height="24"
             viewBox="0 0 24 24"
+            fill="none"
             stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-8 w-8 text-white"
           >
-            <path
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+            <polyline points="10 17 15 12 10 7" />
+            <line x1="15" x2="3" y1="12" y2="12" />
+          </svg>
+        </div>
+        <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 bg-clip-text text-transparent">
+          Welcome Back
+        </h2>
+        <p className="text-lg text-gray-600">Sign in to unlock premium translation features</p>
+      </div>
+      <form onSubmit={handleSignIn} className="space-y-6 mt-6">
+        {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+        <div className="space-y-2">
+          <label htmlFor="signin-email" className="text-sm font-medium text-gray-700">
+            Email Address
+          </label>
+          <div className="relative">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              strokeWidth={2}
-              d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+              className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500"
+            >
+              <rect width="20" height="16" x="2" y="4" rx="2" />
+              <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+            </svg>
+            <input
+              type="email"
+              id="signin-email"
+              placeholder="Enter your email"
+              className="w-full pl-10 pr-3 py-2 h-12 rounded-xl border-2 bg-white/90 border-gray-300/60 text-gray-900 focus:border-purple-400/70 focus:outline-none focus:ring-2 focus:ring-purple-400/70 transition-all duration-300"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
             />
-          </svg>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <label htmlFor="signin-password" className="text-sm font-medium text-gray-700">
+            Password
+          </label>
+          <div className="relative">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500"
+            >
+              <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            <input
+              type="password"
+              id="signin-password"
+              placeholder="Enter your password"
+              className="w-full pl-10 pr-3 py-2 h-12 rounded-xl border-2 bg-white/90 border-gray-300/60 text-gray-900 focus:border-purple-400/70 focus:outline-none focus:ring-2 focus:ring-purple-400/70 transition-all duration-300"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+        </div>
+        <button
+          type="submit"
+          className="w-full h-12 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:via-indigo-700 hover:to-blue-700 text-white font-bold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={loading}
+        >
+          {loading ? (
+            <span className="flex items-center justify-center gap-2">
+              <svg
+                className="animate-spin h-5 w-5 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+              Signing In...
+            </span>
+          ) : (
+            <span className="flex items-center gap-2 justify-center">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-4 w-4"
+              >
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                <polyline points="10 17 15 12 10 7" />
+                <line x1="15" x2="3" y1="12" y2="12" />
+              </svg>
+              Sign In to Premium
+            </span>
+          )}
         </button>
-        <h2 className="text-2xl font-semibold text-purple-800 mb-4 text-center">Sign In</h2>
-
-        {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-
-        <form onSubmit={handleSignIn} className="space-y-4">
-          <input
-            type="email"
-            placeholder="Email"
-            className="w-full p-2 border rounded"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            className="w-full p-2 border rounded"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          <button
-            type="submit"
-            className="w-full bg-purple-800 text-white p-2 rounded hover:bg-purple-900 transition"
-            disabled={loading}
-          >
-            {loading ? "Signing In..." : "Sign In"}
-          </button>
-        </form>
-
-        <p className="text-sm text-center mt-4">
-          Don't have an account? <a href="/signup" className="text-purple-600 hover:underline">Sign Up</a>
-        </p>
-      </div>
+      </form>
+      <p className="text-sm text-center mt-4">
+        Don't have an account?{" "}
+        <a href="/signup" className="text-indigo-600 hover:text-indigo-800 hover:underline">
+          Sign Up
+        </a>
+      </p>
     </div>
   );
 };
