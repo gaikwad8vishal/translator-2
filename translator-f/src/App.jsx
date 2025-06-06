@@ -1,31 +1,69 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Header from "./components/Header";
+import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import SignIn from "./pages/Login";
 import SignUp from "./pages/Signup";
 import { AuthProvider } from "./utils/api";
 import Translator from "./pages/Home";
-import AuthWatcher from "./components/authwatcher";
 import { ThemeProvider } from "./components/Therechanger";
-import HomeSetting from "./components/HomeSetting";
+import { useNavigate } from "react-router-dom";
+import React, { useEffect } from "react";
 
 function App() {
   return (
-    <ThemeProvider>    
+    <ThemeProvider>
       <AuthProvider>
-      <Router> 
-        <div className="flex flex-col min-h-screen">
-          <main className="flex-1 p-4">
-            <Routes>
-              <Route path="/" element={<Translator />} />
-              <Route path="/signin" element={<SignIn />} />
-              <Route path="/signup" element={<SignUp />} />
-            </Routes>
-          </main>
-        </div>
-      </Router>
-    </AuthProvider>
+        <Router>
+          <div className="flex flex-col min-h-screen">
+            <main className="flex-1 p-4">
+              <Routes>
+                <Route path="/" element={<Translator />} />
+                <Route
+                  path="/signin"
+                  element={
+                    <ModalWrapper>
+                      <SignIn />
+                    </ModalWrapper>
+                  }
+                />
+                <Route
+                  path="/signup"
+                  element={
+                    <ModalWrapper>
+                      <SignUp />
+                    </ModalWrapper>
+                  }
+                />
+              </Routes>
+            </main>
+          </div>
+        </Router>
+      </AuthProvider>
     </ThemeProvider>
+  );
+}
 
+// ModalWrapper component to render modals with backdrop
+function ModalWrapper({ children }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleClose = () => {
+    navigate("/", { replace: true });
+  };
+
+  useEffect(() => {
+    document.body.classList.add("no-scroll");
+    return () => document.body.classList.remove("no-scroll");
+  }, []);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      onClick={handleClose}
+    >
+      <div onClick={(e) => e.stopPropagation()}>
+        {React.cloneElement(children, { onClose: handleClose })}
+      </div>
+    </div>
   );
 }
 

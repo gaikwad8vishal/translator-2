@@ -40,15 +40,24 @@ const SignIn = ({ onClose }) => {
   };
 
   const handleClose = () => {
-    onClose();
-    navigate("/"); // Redirect to home when closing
+    try {
+      if (typeof onClose === "function") {
+        onClose(); // Call parent-provided onClose if it's a function
+      } else {
+        console.warn("onClose is not a function, navigating to /");
+        navigate("/", { replace: true }); // Fallback to navigation
+      }
+    } catch (err) {
+      console.error("Error in handleClose:", err);
+      navigate("/", { replace: true }); // Ensure navigation on error
+    }
   };
 
   return (
     <div
       role="dialog"
       aria-modal="true"
-      className="w-full max-w-md p-6 bg-gradient-to-br from-white/95 via-purple-50/90 to-blue-50/95 border-2 border-purple-200/60 rounded-lg shadow-2xl backdrop-blur-xl animate-in fade-in-0 zoom-in-95 duration-200"
+      className="fixed left-1/2 top-1/2 z-50 grid w-full max-w-md -translate-x-1/2 -translate-y-1/2 gap-4 bg-gradient-to-br from-white/95 via-purple-50/90 to-blue-50/90 p-4 sm:p-6 rounded-lg sm:rounded-xl shadow-2xl border-2 border-purple-200/70 backdrop-blur-lg transition-all duration-300 ease-in-out"
       tabIndex={-1}
     >
       <button

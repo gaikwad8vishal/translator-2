@@ -2,14 +2,13 @@ import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-
-
 const SignUp = ({ onClose }) => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState(""); // New state for success message
 
   const navigate = useNavigate();
   const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
@@ -18,6 +17,7 @@ const SignUp = ({ onClose }) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setSuccess("");
 
     try {
       const response = await axios.post(`${backendURL}/users/signup`, {
@@ -26,28 +26,41 @@ const SignUp = ({ onClose }) => {
         password,
       });
 
-      const { token, user } = response.data;
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
-      onClose();
-      navigate("/", { replace: true }); // Navigate to homepage and replace history entry
+      // Handle success response
+      const { message } = response.data;
+      setSuccess(message || "Signup successful! Redirecting to sign in...");
+      setTimeout(() => {
+        onClose();
+        navigate("/signin", { replace: true }); // Redirect to sign-in page
+      }, 2000); // Delay to show success message
     } catch (err) {
-      setError("Signup failed. Please try again.");
+      // Handle specific error messages from backend
+      const errorMessage = err.response?.data?.message || "Signup failed. Please try again.";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   const handleClose = () => {
-    onClose();
-    navigate("/", { replace: true });
+    try {
+      if (typeof onClose === "function") {
+        onClose();
+      } else {
+        console.warn("onClose is not a function, navigating to /");
+        navigate("/", { replace: true });
+      }
+    } catch (err) {
+      console.error("Error in handleClose:", err);
+      navigate("/", { replace: true });
+    }
   };
 
   return (
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed left-[50%] top-[50%] z-50 grid w-full translate-x-[-50%] translate-y-[-50%] gap-4 bg-background p-6 duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg max-w-md backdrop-blur-xl border-2 shadow-2xl bg-gradient-to-br from-white/95 via-purple-50/90 to-blue-50/95 border-purple-200/60"
+      className="fixed left-1/2 top-1/2 z-50 grid w-full max-w-md -translate-x-1/2 -translate-y-1/2 gap-4 bg-gradient-to-br from-white/95 via-purple-50/90 to-blue-50/90 p-4 sm:p-6 rounded-lg sm:rounded-xl shadow-2xl border-2 border-purple-200/70 backdrop-blur-lg transition-all duration-300 ease-in-out"
       tabIndex={-1}
       onClick={(e) => e.stopPropagation()}
     >
@@ -100,6 +113,7 @@ const SignUp = ({ onClose }) => {
         <p className="text-lg text-gray-600">Create your free premium account in seconds</p>
       </div>
       <form onSubmit={handleSignUp} className="space-y-6 mt-6">
+        {success && <p className="text-green-500 text-sm text-center">{success}</p>}
         {error && <p className="text-red-500 text-sm text-center">{error}</p>}
         <div className="space-y-2">
           <label htmlFor="signup-name" className="text-sm font-medium text-gray-700">

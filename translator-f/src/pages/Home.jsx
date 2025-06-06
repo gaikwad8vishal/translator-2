@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { ArrowLeftRight, Languages, MessageSquare, Users, X, Settings, Crown, UserCheck } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeftRight, Languages, MessageSquare, Users, Settings, Crown, UserCheck } from "lucide-react";
 import Tesseract from "tesseract.js";
 import { LanguageSelector } from "../components/LanguageSelector";
 import { useGeolocation } from "../components/languagebylocation";
@@ -12,8 +13,6 @@ import ChatSidebar from "../components/ChatSidebar";
 import HomeSetting from "../components/HomeSetting";
 import { useTranslation } from "../components/useTranslation";
 import { useSpeech } from "../components/UseSpeech";
-import SignIn from "../../src/pages/Login";
-import SignUp from "../../src/pages/Signup";
 
 const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
 
@@ -55,14 +54,17 @@ const Translator = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isLiveChatOpen, setIsLiveChatOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isSignInOpen, setIsSignInOpen] = useState(false);
-  const [isSignUpOpen, setIsSignUpOpen] = useState(false);
   const [isPdfJsLoaded, setIsPdfJsLoaded] = useState(false);
   const [mammoth, setMammoth] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState("User");
+  const [isSignUpOpen, setisSignUpOpen] = useState(false)
+  const [isSignInOpen, setisSignInOpen] = useState(false);
+
+
+  const navigate = useNavigate();
 
   const { translatedText, loading: translationLoading, error: translationError, setError: setTranslationError, history, setHistory, translateText } = useTranslation();
   const { isListening, startSpeechRecognition, stopSpeechRecognition, speakText, error: speechError, setError: setSpeechError, isSpeaking } = useSpeech(from, (transcript) => setText((prev) => prev + transcript));
@@ -81,7 +83,8 @@ const Translator = () => {
   // Handle logout
   const handleLogout = useCallback(() => {
     localStorage.removeItem("token");
-    localStorage.removeItem("username");
+    localStorage.removeItem("name");
+    localStorage.removeItem("user");
     setIsAuthenticated(false);
     setUsername("User");
     setLoginWarning("Logged out successfully.");
@@ -146,31 +149,6 @@ const Translator = () => {
     return () => clearTimeout(timer);
   }, [text, from, to, translateText]);
 
-  // Prevent background scrolling when any modal is open
-  useEffect(() => {
-    if (isSignInOpen || isSignUpOpen) {
-      document.body.classList.add("no-scroll");
-    } else {
-      document.body.classList.remove("no-scroll");
-    }
-    return () => document.body.classList.remove("no-scroll");
-  }, [isSignInOpen, isSignUpOpen]);
-
-  // Close modals on Escape key
-  useEffect(() => {
-    const handleEscape = (e) => {
-      if (e.key === "Escape") {
-        if (isSignUpOpen) {
-          setIsSignUpOpen(false);
-        } else if (isSignInOpen) {
-          setIsSignInOpen(false);
-        }
-      }
-    };
-    window.addEventListener("keydown", handleEscape);
-    return () => window.removeEventListener("keydown", handleEscape);
-  }, [isSignInOpen, isSignUpOpen]);
-
   const handleSwapLanguages = useCallback(() => {
     setFrom(to);
     setTo(from);
@@ -216,35 +194,20 @@ const Translator = () => {
   }, []);
 
   const handleSignInClick = useCallback(() => {
-    setIsSignInOpen(true);
-    setIsSignedUpOpen(false);
     setIsHistoryOpen(false);
     setIsChatOpen(false);
     setIsLiveChatOpen(false);
     setIsSettingsOpen(false);
-  }, []);
-
-  const handleSignInClose = useCallback(() => {
-    setIsSignInOpen(false);
-  }, []);
+    navigate("/signin");
+  }, [navigate]);
 
   const handleSignUpClick = useCallback(() => {
-    setIsSignedUpOpen(true);
-    setIsSignInOpen(false);
     setIsHistoryOpen(false);
     setIsChatOpen(false);
     setIsLiveChatOpen(false);
     setIsSettingsOpen(false);
-  }, []);
-
-  const handleSignUpClose = useCallback(() => {
-    setIsSignUpOpen(false);
-  }, []);
-
-  const handleSignInFromSignUp = useCallback(() => {
-    setIsSignUpOpen(false);
-    setIsSignInOpen(true);
-  }, []);
+    navigate("/signup");
+  }, [navigate]);
 
   const handleDocumentUpload = useCallback(
     async (event) => {
@@ -385,10 +348,10 @@ const Translator = () => {
       <div className="min-h-screen transition-all duration-700 relative overflow-hidden bg-gradient-to-br from-purple-50 via-blue-50/80 to-indigo-50/70">
         <div className="absolute inset-0">
           <div className="absolute top-20 left-10 w-96 h-96 rounded-full blur-3xl animate-pulse bg-purple-300/30 background-circle"></div>
-          <div className="absolute bottom-20 right-10 w-[500px] h-[500px] rounded-full blur-3xl animate-pulse delay-1000 bg-blue-300/30 background-circle"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full blur-3xl animate-pulse delay-500 bg-indigo-300/30 background-circle"></div>
-          <div className="absolute top-10 right-1/3 w-80 h-80 rounded-full blur-3xl animate-pulse delay-700 bg-pink-300/25 background-circle"></div>
-          <div className="absolute bottom-40 left-1/4 w-72 h-72 rounded-full blur-3xl animate-pulse delay-300 bg-cyan-300/25 background-circle"></div>
+          <div className="absolute bottom-20 right-10 w-[500px] h-[500px] rounded-full blur-3xl animate-pulse delay-1000 bg-blue-300/40 background-circle"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full blur-3xl animate-pulse delay-500 bg-indigo-100/30"></div>
+          <div className="absolute top-10 right-1/3 w-80 h-80 rounded-full blur-3xl animate-pulse delay-700 bg-pink-100/25"></div>
+          <div className="absolute bottom-40 left-1/4 w-72 h-72 rounded-full blur-3xl animate-pulse delay-300 bg-cyan-100/40 background-circle"></div>
         </div>
         <header className="relative z-10 pb-4">
           <div className="max-w-7xl mx-auto md:flex rounded-xl items-center justify-between gap-4">
@@ -407,7 +370,7 @@ const Translator = () => {
               <div>
                 <button
                   onClick={handleSettingsClick}
-                  className="inline-flex md:hidden items-center justify-center h-8 w-8 sm:h-9 sm:w-9 lg:h-10 lg:w-10 transition-all duration-300 hover:scale-110 bg-currentcolor text-purple-600 hover:text-purple-700"
+                  className="inline-flex md:hidden items-center justify-center h-8 w-8 sm:h-9 sm:w-9 lg:h-10 lg:w-10 transition-all duration-300 hover:scale-110 bg-white/80 text-purple-600 hover:text-purple-700"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -570,7 +533,7 @@ const Translator = () => {
                       height="24"
                       viewBox="0 0 24 24"
                       fill="none"
-                      stroke="currentColor"
+                      stroke="green"
                       strokeWidth="2"
                       strokeLinecap="round"
                       strokeLinejoin="round"
