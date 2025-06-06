@@ -380,7 +380,7 @@ const Translator = () => {
               </div>
               <button
                 onClick={handleSettingsClick}
-                className="inline-flex md:hidden items-center justify-center h-8 w-8 sm:h-9 sm:w-9 lg:h-10 lg:w-10 transition-all duration-300 hover:scale-110 bg-white/80 dark:bg-gray-900 text-gray-800 dark:text-gray-200 hover:text-purple-700 dark:hover:text-purple-400"
+                className="inline-flex md:hidden items-center justify-center h-8 w-8 sm:h-9 sm:w-9 lg:h-10 lg:w-10 transition-all duration-300 hover:scale-110   text-gray-800 dark:text-gray-200 hover:text-purple-700 dark:hover:text-purple-400"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"

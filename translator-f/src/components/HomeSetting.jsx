@@ -1,9 +1,18 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 
 const HomeSetting = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
-  // State for toggles
+  // State for theme
+  const [theme, setTheme] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("theme") || "light";
+    }
+    return "light";
+  });
+
+  // State for settings toggles
   const [settings, setSettings] = useState({
     autoDetect: true,
     smartTranslation: true,
@@ -22,13 +31,50 @@ const HomeSetting = ({ isOpen, onClose }) => {
   });
 
   // State for sliders
-  const [speechRate, setSpeechRate] = useState(1);
-  const [speechPitch, setSpeechPitch] = useState(1);
   const [translationQuality, setTranslationQuality] = useState(95);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [username, setUsername] = useState("User");
+  const [loginWarning, setLoginWarning] = useState("");
+  const nevigate = useNavigate();
+  // State for popup
+  const [showPopup, setShowPopup] = useState(false);
 
-  // Toggle handler
+  // Toggle handler for settings
   const toggleSetting = (key) => {
-    setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
+    // Show popup instead of toggling the setting
+    setShowPopup(true);
+    // Optionally, you can keep the toggle functionality by uncommenting the line below
+    // setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  // Toggle handler for theme
+  const toggleTheme = () => {
+    setTheme((prev) => {
+      const newTheme = prev === "light" ? "dark" : "light";
+      localStorage.setItem("theme", newTheme);
+      return newTheme;
+    });
+  };
+
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("name");
+    localStorage.removeItem("user");
+    setIsAuthenticated(false);
+    setUsername("User");
+    setLoginWarning("Logged out successfully.");
+    setTimeout(() => setLoginWarning(""), 3000);
+  }, []);
+
+  // Placeholder handlers for sign-in and sign-up
+  const handleSignInClick = () => {
+    nevigate("/signin")
+  };
+
+  const handleSignUpClick = () => {
+    // Implement sign-up logic here (e.g., redirect to registration page)
+    nevigate("/signup")
+
   };
 
   // Slider handler
@@ -36,6 +82,11 @@ const HomeSetting = ({ isOpen, onClose }) => {
     const value = Math.max(min, Math.min(max, Number(e.target.value)));
     setter(value);
   };
+
+  // Apply theme to document
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+  }, [theme]);
 
   // Disable background scrolling when sidebar is open
   useEffect(() => {
@@ -49,7 +100,17 @@ const HomeSetting = ({ isOpen, onClose }) => {
     };
   }, [isOpen]);
 
-  // Modified onClose handler to explicitly remove no-scroll
+  // Auto-hide popup after 3 seconds
+  useEffect(() => {
+    if (showPopup) {
+      const timer = setTimeout(() => {
+        setShowPopup(false);
+      }, 3000); // Popup disappears after 3 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [showPopup]);
+
+  // Modified onClose handler
   const handleClose = () => {
     document.body.classList.remove("no-scroll");
     onClose();
@@ -58,23 +119,32 @@ const HomeSetting = ({ isOpen, onClose }) => {
   return (
     <div
       data-state={isOpen ? "open" : "closed"}
-      className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm transition-opacity duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
       style={{ pointerEvents: "auto" }}
       onClick={handleClose}
-      data-aria-hidden="true"
       aria-hidden="true"
     >
+      {/* Popup Notification */}
+      {showPopup && (
+        <div
+          className="fixed top-12 rounded-xl left-1/2 transform -translate-x-1/2 z-[60] bg-black text-white px-8 py-2 rounded-b-lg shadow-lg animate-slide-down"
+          style={{ animation: "slide-down 0.5s ease-out" }}
+        >
+          <p className="text-sm font-medium">Feature Coming Soon!</p>
+        </div>
+      )}
+
       <div
         role="dialog"
         aria-modal="true"
-        className={`fixed inset-y-0 right-0 z-50 h-full w-full bg-white/95 backdrop-blur-lg border-l border-gray-200/60 p-4 transition-transform duration-300 transform-gpu sm:w-80 md:w-96 lg:w-[28rem] ${
+        className={`fixed inset-y-0 right-0 z-50 h-full w-full bg-gray-100 dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 p-4 transition-transform duration-300 transform-gpu sm:w-80 md:w-96 lg:w-[28rem] ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
         onClick={(e) => e.stopPropagation()}
         tabIndex={-1}
       >
         <div className="flex flex-col space-y-3">
-          <h2 className="flex items-center gap-2 text-base font-semibold text-gray-900 sm:text-lg">
+          <h2 className="flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white sm:text-lg">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="24"
@@ -99,10 +169,10 @@ const HomeSetting = ({ isOpen, onClose }) => {
             </svg>
             PolyglotPro Settings
           </h2>
-          <p className="text-xs text-gray-600 sm:text-sm">Customize your translation experience</p>
+          <p className="text-xs text-gray-600 dark:text-gray-400 sm:text-sm">Customize your translation experience</p>
         </div>
         <button
-          className="absolute right-3 top-3 rounded-sm text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 p-2"
+          className="absolute right-3 top-3 rounded-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 p-2"
           onClick={handleClose}
           aria-label="Close settings"
         >
@@ -124,7 +194,7 @@ const HomeSetting = ({ isOpen, onClose }) => {
         </button>
         <div className="mt-4 space-y-5 max-h-[calc(100vh-4rem)] overflow-y-auto pr-2 pb-8">
           <div>
-            <h3 className="mb-2 flex items-center gap-2 font-medium text-gray-800 text-sm sm:text-base">
+            <h3 className="mb-2 flex items-center gap-2 font-medium text-gray-800 dark:text-gray-200 text-sm sm:text-base">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="24"
@@ -142,28 +212,42 @@ const HomeSetting = ({ isOpen, onClose }) => {
               Favorite Languages
             </h3>
             <div className="space-y-2">
-              <div className="flex items-center justify-between rounded-lg bg-gray-100/50 p-2 text-xs sm:text-sm text-gray-700">
-                <span>English 🇺🇸</span>
-                <button className="p-2 text-gray-500 hover:text-red-500" aria-label="Remove English">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+              {[
+                { name: "English", flag: "🇺🇸" },
+                { name: "Spanish", flag: "🇪🇸" },
+                { name: "French", flag: "🇫🇷" },
+              ].map((lang) => (
+                <div
+                  key={lang.name}
+                  className="flex items-center justify-between rounded-lg bg-gray-200/50 dark:bg-gray-800/50 p-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300"
+                >
+                  <span>
+                    {lang.name} {lang.flag}
+                  </span>
+                  <button
+                    className="p-2 text-gray-500 ciem-gray-400 hover:text-red-500 dark:hover:text-red-400"
+                    aria-label={`Remove ${lang.name}`}
                   >
-                    <path d="M18 6 6 18" />
-                    <path d="M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M18 6 6 18" />
+                      <path d="M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
             </div>
             <button
-              className="mt-3 inline-flex items-center gap-2 rounded-xl bg-white/70 border border-gray-200/60 px-3 py-2 text-xs font-medium text-gray-800 hover:bg-white/90 hover:scale-105 transition-transform sm:text-sm sm:px-4 sm:py-3"
+              className="mt-3 inline-flex items-center gap-2 rounded-xl bg-white/70 dark:bg-gray-800/70 border border-gray-200/60 dark:border-gray-700/50 px-3 py-2 text-xs font-medium text-gray-800 dark:text-white hover:bg-white/90 dark:hover:bg-gray-700/80 hover:scale-105 transition-transform sm:text-sm sm:px-4 sm:py-3"
               aria-label="Add language"
             >
               <span className="text-base sm:text-lg">➕</span>
@@ -171,99 +255,7 @@ const HomeSetting = ({ isOpen, onClose }) => {
             </button>
           </div>
           <div>
-            <h3 className="mb-2 flex items-center gap-2 font-medium text-gray-800 text-sm sm:text-base">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-4 w-4 text-purple-500"
-              >
-                <path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z" />
-                <path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z" />
-                <path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4" />
-                <path d="M17.599 6.5a3 3 0 0 0 .399-1.375" />
-                <path d="M6.003 5.125A3 3 0 0 0 6.401 6.5" />
-                <path d="M3.477 10.896a4 4 0 0 1 .585-.396" />
-                <path d="M19.938 10.5a4 4 0 0 1 .585.396" />
-                <path d="M6 18a4 4 0 0 1-1.967-.516" />
-                <path d="M19.967 17.484A4 4 0 0 1 18 18" />
-              </svg>
-              AI Translation
-            </h3>
-            <div className="space-y-2">
-              {[
-                {
-                  key: "autoDetect",
-                  label: "Auto-detect Language",
-                  icon: "m5 8 6 6 m-7 0 6-6 2-3 M2 5h12 M7 2h1 m14 20-5-10-5 10 M14 18h6",
-                },
-                {
-                  key: "smartTranslation",
-                  label: "Smart Translation",
-                  icon: "M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z",
-                },
-                {
-                  key: "contextAnalysis",
-                  label: "Context Analysis",
-                  icon: "M12 2a10 10 0 0 1 10 10 10 10 0 0 1-10 10 10 10 0 0 1-10-10 10 10 0 0 1 10-10 M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20 M2 12h20",
-                },
-                {
-                  key: "alternativeTranslations",
-                  label: "Alternative Translations",
-                  icon: "M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z M13.5 6.5a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1z M17.5 10.5a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1z M8.5 7.5a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1z M6.5 12.5a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1z",
-                },
-                {
-                  key: "culturalAdaptation",
-                  label: "Cultural Adaptation",
-                  icon: "M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z",
-                },
-              ].map(({ key, label, icon }) => (
-                <div key={key} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="h-4 w-4 text-purple-500"
-                    >
-                      <path d={icon} />
-                    </svg>
-                    <span className="text-xs sm:text-sm text-gray-700">{label}</span>
-                  </div>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={settings[key]}
-                    data-state={settings[key] ? "checked" : "unchecked"}
-                    className={`inline-flex h-6 w-11 items-center rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50 ${
-                      settings[key] ? "bg-purple-500" : "bg-gray-200"
-                    }`}
-                    onClick={() => toggleSetting(key)}
-                  >
-                    <span
-                      className={`block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
-                        settings[key] ? "translate-x-5" : "translate-x-0"
-                      }`}
-                    />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div>
-            <h3 className="mb-2 flex items-center gap-2 font-medium text-gray-800 text-sm sm:text-base">
+            <h3 className="mb-2 flex items-center gap-2 font-medium text-gray-800 dark:text-gray-200 text-sm sm:text-base">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="24"
@@ -276,71 +268,50 @@ const HomeSetting = ({ isOpen, onClose }) => {
                 strokeLinejoin="round"
                 className="h-4 w-4 text-blue-500"
               >
-                <path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z" />
-                <path d="M16 9a5 5 0 0 1 0 6" />
-                <path d="M19.364 18.364a9 9 0 0 0 0-12.728" />
+                <path d="M12 2a10 10 0 0 1 10 10 10 10 0 0 1-10 10 10 10 0 0 1-10-10 10 10 0 0 1 10-10 M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20 M2 12h20" />
               </svg>
-              Voice & Audio
+              Appearance
             </h3>
-            <div className="space-y-2">
-              {[
-                { key: "voiceSettings", label: "Voice Settings" },
-                { key: "autoSpeak", label: "Auto-speak Translations" },
-              ].map(({ key, label }) => (
-                <div key={key} className="flex items-center justify-between">
-                  <span className="text-xs sm:text-sm text-gray-700">{label}</span>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={settings[key]}
-                    data-state={settings[key] ? "checked" : "unchecked"}
-                    className={`inline-flex h-6 w-11 items-center rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50 ${
-                      settings[key] ? "bg-purple-500" : "bg-gray-200"
-                    }`}
-                    onClick={() => toggleSetting(key)}
-                  >
-                    <span
-                      className={`block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
-                        settings[key] ? "translate-x-5" : "translate-x-0"
-                      }`}
-                    />
-                  </button>
-                </div>
-              ))}
-              <div className="space-y-1">
-                <label className="text-xs sm:text-sm text-gray-700">Speech Rate: {speechRate.toFixed(1)}x</label>
-                <input
-                  type="range"
-                  min="0.5"
-                  max="2"
-                  step="0.1"
-                  value={speechRate}
-                  onChange={handleSliderChange(setSpeechRate, 0.5, 2)}
-                  className="w-full h-2 bg-gray-200 rounded-full appearance-none cursor-pointer accent-purple-500"
-                  aria-valuemin={0.5}
-                  aria-valuemax={2}
-                  aria-valuenow={speechRate}
-                />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-4 w-4 text-blue-500"
+                >
+                  <path d={theme === "light" ? "M12 3v1m0 16v1m8.66-8.66h-1m-16 0h-1m15.364-6.364-.707.707M5.343 18.657l-.707.707m12.728-12.728.707.707M6.05 6.05l.707.707M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z" : "M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"} />
+                </svg>
+                <span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">
+                  {theme === "light" ? "Light Mode" : "Dark Mode"}
+                </span>
               </div>
-              <div className="space-y-1">
-                <label className="text-xs sm:text-sm text-gray-700">Speech Pitch: {speechPitch.toFixed(1)}</label>
-                <input
-                  type="range"
-                  min="0.5"
-                  max="2"
-                  step="0.1"
-                  value={speechPitch}
-                  onChange={handleSliderChange(setSpeechPitch, 0.5, 2)}
-                  className="w-full h-2 bg-gray-200 rounded-full appearance-none cursor-pointer accent-purple-500"
-                  aria-valuemin={0.5}
-                  aria-valuemax={2}
-                  aria-valuenow={speechPitch}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={theme === "dark"}
+                data-state={theme === "dark" ? "checked" : "unchecked"}
+                className={`inline-flex h-6 w-11 items-center rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 ${
+                  theme === "dark" ? "bg-blue-500" : "bg-gray-200"
+                }`}
+                onClick={toggleTheme}
+              >
+                <span
+                  className={`block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                    theme === "dark" ? "translate-x-5" : "translate-x-0"
+                  }`}
                 />
-              </div>
+              </button>
             </div>
           </div>
           <div>
-            <h3 className="mb-2 flex items-center gap-2 font-medium text-gray-800 text-sm sm:text-base">
+            <h3 className="mb-2 flex items-center gap-2 font-medium text-gray-800 dark:text-gray-200 text-sm sm:text-base">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="24"
@@ -367,19 +338,19 @@ const HomeSetting = ({ isOpen, onClose }) => {
                 { key: "autoCorrection", label: "Smart Auto-correction" },
               ].map(({ key, label }) => (
                 <div key={key} className="flex items-center justify-between">
-                  <span className="text-xs sm:text-sm text-gray-700">{label}</span>
+                  <span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">{label}</span>
                   <button
                     type="button"
                     role="switch"
                     aria-checked={settings[key]}
                     data-state={settings[key] ? "checked" : "unchecked"}
                     className={`inline-flex h-6 w-11 items-center rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50 ${
-                      settings[key] ? "bg-purple-500" : "bg-gray-200"
+                      settings[key] ? "bg-purple-500" : "bg-gray-200 dark:bg-gray-700"
                     }`}
                     onClick={() => toggleSetting(key)}
                   >
                     <span
-                      className={`block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                      className={`block h-5 w-5 rounded-full bg-white dark:bg-gray-900 shadow-sm transition-transform ${
                         settings[key] ? "translate-x-5" : "translate-x-0"
                       }`}
                     />
@@ -387,7 +358,7 @@ const HomeSetting = ({ isOpen, onClose }) => {
                 </div>
               ))}
               <div className="space-y-1">
-                <label className="text-xs sm:text-sm text-gray-700">Translation Quality: {translationQuality}%</label>
+                <label className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">Translation Quality: {translationQuality}%</label>
                 <input
                   type="range"
                   min="50"
@@ -395,7 +366,7 @@ const HomeSetting = ({ isOpen, onClose }) => {
                   step="1"
                   value={translationQuality}
                   onChange={handleSliderChange(setTranslationQuality, 50, 100)}
-                  className="w-full h-2 bg-gray-200 rounded-full appearance-none cursor-pointer accent-purple-500"
+                  className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full appearance-none cursor-pointer accent-purple-500"
                   aria-valuemin={50}
                   aria-valuemax={100}
                   aria-valuenow={translationQuality}
@@ -403,8 +374,8 @@ const HomeSetting = ({ isOpen, onClose }) => {
               </div>
             </div>
           </div>
-          <div>
-            <h3 className="mb-2 flex items-center gap-2 font-medium text-gray-800 text-sm sm:text-base">
+          <div className="p-4 rounded-xl bg-gradient-to-r from-purple-100/20 to-indigo-100/20 dark:from-purple-600/20 dark:to-indigo-600/20 border border-purple-200/50 dark:border-purple-400/50">
+            <h3 className="mb-2 flex items-center gap-2 font-medium text-purple-800 dark:text-purple-200 text-sm sm:text-base">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="24"
@@ -417,8 +388,7 @@ const HomeSetting = ({ isOpen, onClose }) => {
                 strokeLinejoin="round"
                 className="h-4 w-4 text-yellow-500"
               >
-                <path d="M12 2.5a2.5 2.5 0 0 1 1.8.74l5.96 5.96a2.5 2.5 0 0 1 0 3.54l-5.96 5.96a2.5 2.5 0 0 1-3.54 0l-5.96-5.96a2.5 2.5 0 0 1 0-3.54l5.96-5.96A2.5 2.5 0 0 1 12 2.5Z" />
-                <path d="m9 12 2 2 4-4" />
+                <path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z" />
               </svg>
               Premium Features
             </h3>
@@ -428,25 +398,81 @@ const HomeSetting = ({ isOpen, onClose }) => {
                 { key: "professionalTerms", label: "Professional Terminology" },
               ].map(({ key, label }) => (
                 <div key={key} className="flex items-center justify-between">
-                  <span className="text-xs sm:text-sm text-gray-700">{label}</span>
+                  <span className="text-xs sm:text-sm text-purple-700 dark:text-purple-300">{label}</span>
                   <button
                     type="button"
                     role="switch"
                     aria-checked={settings[key]}
                     data-state={settings[key] ? "checked" : "unchecked"}
                     className={`inline-flex h-6 w-11 items-center rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50 ${
-                      settings[key] ? "bg-purple-500" : "bg-gray-200"
+                      settings[key] ? "bg-purple-500" : "bg-gray-200 dark:bg-gray-700"
                     }`}
                     onClick={() => toggleSetting(key)}
                   >
                     <span
-                      className={`block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                      className={`block h-5 w-5 rounded-full bg-white dark:bg-gray-900 shadow-sm transition-transform ${
                         settings[key] ? "translate-x-5" : "translate-x-0"
                       }`}
                     />
                   </button>
                 </div>
               ))}
+              {isAuthenticated ? (
+                <button
+                  onClick={handleLogout}
+                  className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-all duration-300 hover:scale-105 rounded-xl px-4 py-2 text-gray-700 dark:text-gray-200 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/50 border hover:border-red-300/50 dark:hover:border-red-700/50"
+                >
+                  Logout
+                </button>
+              ) : (
+                <div className="flex flex-col space-y-2">
+                  <button
+                    onClick={handleSignInClick}
+                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-xs sm:text-sm h-12 sm:h-10 rounded-xl px-4 sm:px-6 py-2 sm:py-2.5 border-2 backdrop-blur-sm text-gray-700 dark:text-gray-200 hover:text-purple-700 dark:hover:text-purple-400 hover:bg-purple-50/80 dark:hover:bg-purple-900/80 border-purple-200/50 dark:border-gray-700/50 hover:border-purple-300/70 dark:hover:border-purple-600/70 shadow-md hover:shadow-xl transition-all duration-300 hover:scale-105"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="blue"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2"
+                    >
+                      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                      <polyline points="10 17 15 12 10 7"></polyline>
+                      <line x1="15" x2="3" y1="12" y2="12"></line>
+                    </svg>
+                    Sign In
+                  </button>
+                  <button
+                    onClick={handleSignUpClick}
+                    className="inline-flex items-center gap-2 whitespace-nowrap text-xs sm:text-sm font-bold h-12 sm:h-10 bg-gradient-to-br from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:via-indigo-700 hover:to-blue-700 dark:from-purple-500 dark:via-indigo-500 dark:to-blue-500 text-white px-6 sm:px-8 py-2 sm:py-3 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 border-2 border-purple-400/30 dark:border-purple-600/30"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2"
+                    >
+                      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="9" cy="7" r="4"></circle>
+                      <line x1="19" x2="19" y1="8" y2="14"></line>
+                      <line x1="22" x2="16" y1="11" y2="11"></line>
+                    </svg>
+                    Join Premium Free
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
