@@ -13,6 +13,8 @@ import HomeSetting from "../components/HomeSetting";
 import { useTranslation } from "../components/useTranslation";
 import { useSpeech } from "../components/UseSpeech";
 import { useTheme } from "../context/ThemeContext";
+import SignIn from "./Login";
+import SignUp from "./Signup";
 
 const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
 
@@ -846,7 +848,7 @@ const Translator = () => {
         <HomeSetting isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
         {isSignInOpen && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/800 dark:bg-black/70 backdrop-blur-sm"
             onClick={handleSignInClose}
           >
             <div onClick={(e) => e.stopPropagation()}>
