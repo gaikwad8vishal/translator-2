@@ -15,6 +15,10 @@ import { useSpeech } from "../components/UseSpeech";
 import { useTheme } from "../context/ThemeContext";
 import SignIn from "./Login";
 import SignUp from "./Signup";
+import { Navigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+
+
 
 const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
 
@@ -65,6 +69,7 @@ const Translator = () => {
   const [isSignUpOpen, setIsSignUpOpen] = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
+  const navigate = useNavigate(); // ✅ Get the navigate function
 
   const { translatedText, loading: translationLoading, error: translationError, setError: setTranslationError, history, setHistory, translateText } = useTranslation();
   const { isListening, startSpeechRecognition, stopSpeechRecognition, speakText, error: speechError, setError: setSpeechError } = useSpeech(from, (transcript) => setText((prev) => prev + transcript));
@@ -170,12 +175,14 @@ const Translator = () => {
     setIsHistoryOpen((prev) => !prev);
   }, []);
 
+  
   const handleChatClick = useCallback(() => {
+    navigate("/single-device"); // ✅ Correct way to navigate
     setIsHistoryOpen(false);
     setIsLiveChatOpen(false);
     setIsSettingsOpen(false);
     setIsChatOpen((prev) => !prev);
-  }, []);
+  }, [navigate]);
 
   const handleLiveChatClick = useCallback(() => {
     setIsHistoryOpen(false);
@@ -396,19 +403,8 @@ const Translator = () => {
                 aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
               >
                 {theme === "light" ? (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth="1.5"
-                    stroke="currentColor"
-                    className="h-4 w-4 sm:h-5 sm:w-5"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M21.752 15.002A9.72 9.72 0 0 1 12 21.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12 21s9-4.365 9-9.75c0-.998-.138-1.964-.398-2.874z"
-                    />
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-moon h-5 w-5" data-lov-id="src/components/ThemeToggle.tsx:26:8" data-lov-name="Moon" data-component-path="src/components/ThemeToggle.tsx" data-component-line="26" data-component-file="ThemeToggle.tsx" data-component-name="Moon" data-component-content="%7B%22className%22%3A%22h-5%20w-5%22%7D">
+                    <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
                   </svg>
                 ) : (
                   <svg

@@ -6,6 +6,8 @@ import Translator from "./pages/Home";
 import { ThemeProvider } from "./context/ThemeContext";
 import { useNavigate } from "react-router-dom";
 import React, { useEffect } from "react";
+import ChatSidebar from "./components/ChatSidebar";
+import LiveChatSidebar from "./components/LiveChatbar";
 
 function App() {
   return (
@@ -16,6 +18,8 @@ function App() {
             <main className="flex-1 ">
               <Routes>
                 <Route path="/" element={<Translator />} />
+                <Route path="/single-device" element={<ChatSidebar />} />
+                <Route path="/conversation" element={<LiveChatSidebar />} />
                 <Route
                   path="/signin"
                   element={
