@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 const HomeSetting = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
@@ -36,6 +36,18 @@ const HomeSetting = ({ isOpen, onClose }) => {
     const value = Math.max(min, Math.min(max, Number(e.target.value)));
     setter(value);
   };
+
+  // Prevent background scrolling when panel is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.classList.add("no-scroll");
+    } else {
+      document.body.classList.remove("no-scroll");
+    }
+    return () => {
+      document.body.classList.remove("no-scroll");
+    };
+  }, [isOpen]);
 
   return (
     <div
@@ -203,7 +215,7 @@ const HomeSetting = ({ isOpen, onClose }) => {
                     xmlns="http://www.w3.org/2000/svg"
                     width="24"
                     height="24"
-                    viewBox="0 0 24 24"
+                    viewBox="0 0 24 48"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2"
