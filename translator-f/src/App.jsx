@@ -14,7 +14,6 @@ function App() {
       <Router> 
         <AuthWatcher /> 
         <div className="flex flex-col min-h-screen">
-          <Header />
           <main className="flex-1 p-4">
             <Routes>
               <Route path="/" element={<Translator />} />
