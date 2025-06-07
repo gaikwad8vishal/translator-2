@@ -1,12 +1,30 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradient background -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a855f7" /> <!-- purple-500 -->
+      <stop offset="100%" stop-color="#4f46e5" /> <!-- indigo-600 -->
+    </linearGradient>
 
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" 
-  fill="" stroke="rgb(188, 124, 241)" strokeWidth="2" 
-  strokeLinecap="round" strokeLinejoin="round" 
-  className="lucide lucide-languages">
-  <path d="m5 8 6 6"></path>
-  <path d="m4 14 6-6 2-3"></path>
-  <path d="M2 5h12"></path>
-  <path d="M7 2h1"></path>
-  <path d="m22 22-5-10-5 10"></path>
-  <path d="M14 18h6"></path>
+    <!-- Shadow filter -->
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,0.25)" />
+    </filter>
+  </defs>
+
+  <!-- Background rectangle with rounded corners, gradient fill, border, and shadow -->
+  <rect 
+    x="4" y="4" width="56" height="56" rx="12" 
+    fill="url(#bgGradient)" 
+    stroke="rgba(216,180,254,0.5)" 
+    stroke-width="1.5"
+    filter="url(#shadow)"
+  />
+
+  <!-- Globe icon -->
+  <g transform="translate(20, 20)" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>
+    <path d="M2 12h20"/>
+  </g>
 </svg>
