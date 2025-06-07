@@ -212,13 +212,13 @@ const HomeSetting = ({ isOpen, onClose }) => {
           </svg>
         </button>
         {isAuthenticated ? (
-        <div className="flex items-center  justify-between p-2 gap-4">
-          <div className="relative  flex items-center gap-3 px-8 py-2.5 rounded-md border-2 backdrop-blur-xl shadow-xl bg-gradient-to-r from-amber-100/90 via-yellow-50/95 to-orange-100/90 dark:from-amber-900/90 dark:via-yellow-800/95 dark:to-orange-900/90 border-amber-300/60 dark:border-amber-700/60 shadow-amber-200/30 dark:shadow-amber-900/30">
+        <div className="flex items-center  justify-between p-1 md:p-2 gap-4">
+          <div className="relative  flex items-center gap-3 px-2 md:px-5 py-2.5 rounded-md border-2 backdrop-blur-xl shadow-xl bg-gradient-to-r from-amber-100/90 via-yellow-50/95 to-orange-100/90 dark:from-amber-900/90 dark:via-yellow-800/95 dark:to-orange-900/90 border-amber-300/60 dark:border-amber-700/60 shadow-amber-200/30 dark:shadow-amber-900/30">
             <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/10 to-orange-400/10 dark:from-yellow-800/10 dark:to-orange-800/10 rounded-2xl"></div>
             <Crown className="h-5 w-5 text-yellow-500 dark:text-yellow-300 drop-shadow-lg relative z-10" />
             <span className="text-sm font-bold relative z-10 text-yellow-700 dark:text-yellow-200">Premium Member</span>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2 rounded-xl border bg-white/80 dark:bg-gray-800/80 border-gray-200/60 dark:border-gray-700/60 text-gray-700 dark:text-gray-200">
+          <div className="flex items-center gap-2 md:px-4 px-2 py-2 rounded-md border bg-white/80 dark:bg-gray-800/80 border-gray-200/60 dark:border-gray-700/60 text-gray-700 dark:text-gray-200">
               <UserCheck className="h-4 w-4 text-green-500 dark:text-green-300" />
                 <span className="text-sm font-medium">{username}</span>
           </div>
@@ -249,8 +249,8 @@ const HomeSetting = ({ isOpen, onClose }) => {
             <div className="space-y-2">
               {[
                 { name: "English", flag: "🇺🇸" },
-                { name: "Spanish", flag: "🇪🇸" },
-                { name: "French", flag: "🇫🇷" },
+                { name: "Hindi", flag: "🇮🇳" },
+                { name: "marathi", flag: "🇮🇳" },
               ].map((lang) => (
                 <div
                   key={lang.name}
@@ -282,11 +282,9 @@ const HomeSetting = ({ isOpen, onClose }) => {
               ))}
             </div>
             <button
-              className="mt-3 inline-flex items-center gap-2 rounded-xl bg-white/70 dark:bg-gray-800/70 border border-gray-200/60 dark:border-gray-700/50 px-3 py-2 text-xs font-medium text-gray-800 dark:text-white hover:bg-white/90 dark:hover:bg-gray-700/80 hover:scale-105 transition-transform sm:text-sm sm:px-4 sm:py-3"
+              className="mt-3 hidden inline-flex items-center gap-2 rounded-xl bg-white/70 dark:bg-gray-800/70 border border-gray-200/60 dark:border-gray-700/50 px-3 py-2 text-xs font-medium text-gray-800 dark:text-white hover:bg-white/90 dark:hover:bg-gray-700/80 hover:scale-105 transition-transform sm:text-sm sm:px-4 sm:py-3"
               aria-label="Add language"
             >
-              <span className="text-base sm:text-lg">➕</span>
-              Add Language
             </button>
           </div>
           <div>
