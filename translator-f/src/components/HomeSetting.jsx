@@ -1,3 +1,4 @@
+import { Crown, UserCheck } from "lucide-react";
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -35,16 +36,23 @@ const HomeSetting = ({ isOpen, onClose }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState("User");
   const [loginWarning, setLoginWarning] = useState("");
-  const nevigate = useNavigate();
+  const navigate = useNavigate();
   // State for popup
   const [showPopup, setShowPopup] = useState(false);
 
+  // Check authentication status on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("token");
+      const name = localStorage.getItem("name") || "User";
+      setIsAuthenticated(!!token);
+      setUsername(name);
+    }
+  }, []);
+
   // Toggle handler for settings
   const toggleSetting = (key) => {
-    // Show popup instead of toggling the setting
     setShowPopup(true);
-    // Optionally, you can keep the toggle functionality by uncommenting the line below
-    // setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
   // Toggle handler for theme
@@ -56,6 +64,13 @@ const HomeSetting = ({ isOpen, onClose }) => {
     });
   };
 
+  // Apply theme to document
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      document.documentElement.classList.toggle("dark", theme === "dark");
+    }
+  }, [theme]);
+
   const handleLogout = useCallback(() => {
     localStorage.removeItem("token");
     localStorage.removeItem("name");
@@ -63,18 +78,19 @@ const HomeSetting = ({ isOpen, onClose }) => {
     setIsAuthenticated(false);
     setUsername("User");
     setLoginWarning("Logged out successfully.");
-    setTimeout(() => setLoginWarning(""), 3000);
+    setTimeout(() => {
+      setLoginWarning("");
+      window.location.reload(); // Refresh the page after logout
+    }, 1000);
   }, []);
 
   // Placeholder handlers for sign-in and sign-up
   const handleSignInClick = () => {
-    nevigate("/signin")
+    navigate("/signin");
   };
 
   const handleSignUpClick = () => {
-    // Implement sign-up logic here (e.g., redirect to registration page)
-    nevigate("/signup")
-
+    navigate("/signup");
   };
 
   // Slider handler
@@ -82,11 +98,6 @@ const HomeSetting = ({ isOpen, onClose }) => {
     const value = Math.max(min, Math.min(max, Number(e.target.value)));
     setter(value);
   };
-
-  // Apply theme to document
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", theme === "dark");
-  }, [theme]);
 
   // Disable background scrolling when sidebar is open
   useEffect(() => {
@@ -105,7 +116,7 @@ const HomeSetting = ({ isOpen, onClose }) => {
     if (showPopup) {
       const timer = setTimeout(() => {
         setShowPopup(false);
-      }, 3000); // Popup disappears after 3 seconds
+      }, 3000);
       return () => clearTimeout(timer);
     }
   }, [showPopup]);
@@ -119,7 +130,7 @@ const HomeSetting = ({ isOpen, onClose }) => {
   return (
     <div
       data-state={isOpen ? "open" : "closed"}
-      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm transition-opacity duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+      className="fixed  inset-0 z-50 bg-black/50 backdrop-blur-sm transition-opacity duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
       style={{ pointerEvents: "auto" }}
       onClick={handleClose}
       aria-hidden="true"
@@ -133,6 +144,14 @@ const HomeSetting = ({ isOpen, onClose }) => {
           <p className="text-sm font-medium">Feature Coming Soon!</p>
         </div>
       )}
+      {loginWarning && (
+        <div
+          className="fixed top-12 rounded-xl left-1/2 transform -translate-x-1/2 z-[60] bg-green-600 text-white px-8 py-2 rounded-b-lg shadow-lg animate-slide-down"
+          style={{ animation: "slide-down 0.5s ease-out" }}
+        >
+          <p className="text-sm font-medium">{loginWarning}</p>
+        </div>
+      )}
 
       <div
         role="dialog"
@@ -143,7 +162,7 @@ const HomeSetting = ({ isOpen, onClose }) => {
         onClick={(e) => e.stopPropagation()}
         tabIndex={-1}
       >
-        <div className="flex flex-col space-y-3">
+        <div className="flex  p-2 flex-col space-y-3">
           <h2 className="flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white sm:text-lg">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -155,7 +174,7 @@ const HomeSetting = ({ isOpen, onClose }) => {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="h-4 w-4 text-purple-500 sm:h-5 sm:w-5"
+              className="h-6 w-6 text-purple-500 sm:h-5 sm:w-5"
             >
               <path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z" />
               <path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z" />
@@ -172,7 +191,7 @@ const HomeSetting = ({ isOpen, onClose }) => {
           <p className="text-xs text-gray-600 dark:text-gray-400 sm:text-sm">Customize your translation experience</p>
         </div>
         <button
-          className="absolute right-3 top-3 rounded-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 p-2"
+          className="absolute right-5 top-5 rounded-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:bg-gray-800 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 p-2"
           onClick={handleClose}
           aria-label="Close settings"
         >
@@ -192,7 +211,23 @@ const HomeSetting = ({ isOpen, onClose }) => {
             <path d="M6 6l12 12" />
           </svg>
         </button>
-        <div className="mt-4 space-y-5 max-h-[calc(100vh-4rem)] overflow-y-auto pr-2 pb-8">
+        {isAuthenticated ? (
+        <div className="flex items-center  justify-between p-2 gap-4">
+          <div className="relative  flex items-center gap-3 px-8 py-2.5 rounded-md border-2 backdrop-blur-xl shadow-xl bg-gradient-to-r from-amber-100/90 via-yellow-50/95 to-orange-100/90 dark:from-amber-900/90 dark:via-yellow-800/95 dark:to-orange-900/90 border-amber-300/60 dark:border-amber-700/60 shadow-amber-200/30 dark:shadow-amber-900/30">
+            <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/10 to-orange-400/10 dark:from-yellow-800/10 dark:to-orange-800/10 rounded-2xl"></div>
+            <Crown className="h-5 w-5 text-yellow-500 dark:text-yellow-300 drop-shadow-lg relative z-10" />
+            <span className="text-sm font-bold relative z-10 text-yellow-700 dark:text-yellow-200">Premium Member</span>
+          </div>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl border bg-white/80 dark:bg-gray-800/80 border-gray-200/60 dark:border-gray-700/60 text-gray-700 dark:text-gray-200">
+              <UserCheck className="h-4 w-4 text-green-500 dark:text-green-300" />
+                <span className="text-sm font-medium">{username}</span>
+          </div>
+        </div>
+          
+        ) : (
+          ""
+        )}
+        <div className="mt-4 space-y-5 max-h-[calc(100vh-4rem)] overflow-y-auto pr-2 pb-32">
           <div>
             <h3 className="mb-2 flex items-center gap-2 font-medium text-gray-800 dark:text-gray-200 text-sm sm:text-base">
               <svg
@@ -225,7 +260,7 @@ const HomeSetting = ({ isOpen, onClose }) => {
                     {lang.name} {lang.flag}
                   </span>
                   <button
-                    className="p-2 text-gray-500 ciem-gray-400 hover:text-red-500 dark:hover:text-red-400"
+                    className="p-2 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400"
                     aria-label={`Remove ${lang.name}`}
                   >
                     <svg
