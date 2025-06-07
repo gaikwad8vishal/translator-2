@@ -23,9 +23,9 @@ const SignIn = ({ onClose }) => {
         password,
       });
 
-      const { token, user, name } = response.data;
+      const { token, user } = response.data;
       localStorage.setItem("token", token);
-      localStorage.setItem("name", name);
+      localStorage.setItem("name", user.name); 
       localStorage.setItem("user", JSON.stringify(user));
       navigate("/");
       setTimeout(() => {

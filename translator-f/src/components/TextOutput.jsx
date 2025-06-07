@@ -7,6 +7,7 @@ const TextOutput = ({ text, loading, onCopy, onSpeak }) => {
   const [outputHeight, setOutputHeight] = useState("auto");
   const [copied, setCopied] = useState(false);
 
+
   useEffect(() => {
     if (outputRef.current) {
       outputRef.current.style.height = "auto";
@@ -15,6 +16,8 @@ const TextOutput = ({ text, loading, onCopy, onSpeak }) => {
       setOutputHeight(`${scrollHeight}px`);
     }
   }, [text, loading]);
+
+
 
   const handleCopy = useCallback(() => {
     if (!text) return;
@@ -45,11 +48,7 @@ const TextOutput = ({ text, loading, onCopy, onSpeak }) => {
             <p className="text-red-500 dark:text-red-400 text-center mt-20 text-lg">{text}</p>
           ) : text ? (
             <p className="text-gray-900 dark:text-gray-200">{text}</p>
-          ) : (
-            <p className="text-gray-400 dark:text-gray-500 text-center mt-20 text-lg">
-              Smart translation with advanced analysis will appear here...
-            </p>
-          )}
+          ) : null}
         </div>
         {text && !loading && (
           <div className="absolute bottom-4 right-4 flex gap-2">

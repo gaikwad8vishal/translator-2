@@ -14,8 +14,6 @@ import SignIn from "./Login";
 import SignUp from "./Signup";
 import { useNavigate } from "react-router-dom";
 
-
-
 const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
 
 const languages = [
@@ -65,7 +63,7 @@ const Translator = () => {
   const [isSignUpOpen, setIsSignUpOpen] = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
-  const navigate = useNavigate(); // ✅ Get the navigate function
+  const navigate = useNavigate();
 
   const { translatedText, loading: translationLoading, error: translationError, setError: setTranslationError, history, setHistory, translateText } = useTranslation();
   const { isListening, startSpeechRecognition, stopSpeechRecognition, speakText, error: speechError, setError: setSpeechError } = useSpeech(from, (transcript) => setText((prev) => prev + transcript));
@@ -138,11 +136,16 @@ const Translator = () => {
     getUserLanguage();
   }, [getUserLanguage]);
 
+  // Updated useEffect to handle empty text
   useEffect(() => {
     const timer = setTimeout(() => {
       if (text.trim()) {
         setIsTranslating(true);
         translateText(text, from, to).finally(() => setIsTranslating(false));
+      } else {
+        console.log("Text is empty, triggering translateText('')");
+        setIsTranslating(true);
+        translateText("", from, to).finally(() => setIsTranslating(false));
       }
     }, 500);
     return () => clearTimeout(timer);
@@ -165,16 +168,15 @@ const Translator = () => {
       setTimeout(() => setLoginWarning(""), 3000);
       return;
     }
-    navigate("/history")
+    navigate("/history");
     setIsChatOpen(false);
     setIsLiveChatOpen(false);
     setIsSettingsOpen(false);
     setIsHistoryOpen((prev) => !prev);
   }, [navigate]);
 
-  
   const handleChatClick = useCallback(() => {
-    navigate("/single-device"); // ✅ Correct way to navigate
+    navigate("/single-device");
     setIsHistoryOpen(false);
     setIsLiveChatOpen(false);
     setIsSettingsOpen(false);
@@ -182,7 +184,7 @@ const Translator = () => {
   }, [navigate]);
 
   const handleLiveChatClick = useCallback(() => {
-    navigate("/conversation")
+    navigate("/conversation");
     setIsHistoryOpen(false);
     setIsChatOpen(false);
     setIsSettingsOpen(false);
@@ -380,7 +382,7 @@ const Translator = () => {
               </div>
               <button
                 onClick={handleSettingsClick}
-                className="inline-flex md:hidden items-center justify-center h-8 w-8 sm:h-9 sm:w-9 lg:h-10 lg:w-10 transition-all duration-300 hover:scale-110   text-gray-800 dark:text-gray-200 hover:text-purple-700 dark:hover:text-purple-400"
+                className="inline-flex md:hidden items-center justify-center h-8 w-8 sm:h-9 sm:w-9 lg:h10 lg:w-10 transition-all duration-300 hover:scale-110   text-gray-800 dark:text-gray-200 hover:text-purple-700 dark:hover:text-purple-400"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
