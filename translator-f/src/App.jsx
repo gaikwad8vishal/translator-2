@@ -50,7 +50,6 @@ function App() {
 // ModalWrapper component to render modals with backdrop
 function ModalWrapper({ children }) {
   const navigate = useNavigate();
-  const location = useLocation();
 
   const handleClose = () => {
     navigate("/", { replace: true });

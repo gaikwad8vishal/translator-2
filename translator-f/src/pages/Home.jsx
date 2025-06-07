@@ -356,7 +356,7 @@ const Translator = () => {
           }
         `}
       </style>
-      <div className="min-h-screen pt-4 transition-all duration-700 relative overflow-hidden bg-gradient-to-br from-purple-50 via-blue-50/80 to-indigo-50/70 dark:from-gray-900 dark:via-purple-900/80 dark:to-indigo-900/70">
+      <div className="min-h-screen pb-24 pt-4 transition-all duration-700 relative overflow-hidden bg-gradient-to-br from-purple-50 via-blue-50/80 to-indigo-50/70 dark:from-gray-900 dark:via-purple-900/80 dark:to-indigo-900/70">
         <div className="absolute inset-0">
           <div className="absolute top-20 left-10 w-96 h-96 rounded-full blur-3xl animate-pulse bg-purple-300/30 dark:bg-purple-900/30 background-circle"></div>
           <div className="absolute bottom-20 right-10 w-[500px] h-[500px] rounded-full blur-3xl animate-pulse delay-1000 bg-blue-300/40 dark:bg-blue-900/40 background-circle"></div>
@@ -432,7 +432,7 @@ const Translator = () => {
               </button>
               <div className="flex items-center gap-2 sm:gap-3 lg:gap-4">
                 {isAuthenticated ? (
-                  <div className="flex items-center gap-4">
+                  <div className="flex hidden md:inline-flex items-center gap-4">
                     <div className="relative flex items-center gap-3 px-5 py-2.5 rounded-2xl border-2 backdrop-blur-xl shadow-xl bg-gradient-to-r from-amber-100/90 via-yellow-50/95 to-orange-100/90 dark:from-amber-900/90 dark:via-yellow-800/95 dark:to-orange-900/90 border-amber-300/60 dark:border-amber-700/60 shadow-amber-200/30 dark:shadow-amber-900/30">
                       <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/10 to-orange-400/10 dark:from-yellow-800/10 dark:to-orange-800/10 rounded-2xl"></div>
                       <Crown className="h-5 w-5 text-yellow-500 dark:text-yellow-300 drop-shadow-lg relative z-10" />
@@ -610,7 +610,7 @@ const Translator = () => {
                 </div>
               </div>
               <div className="flex mb-4 flex-col sm:flex-row items-center justify-between gap-4 sm:gap-6">
-                <div className="w-full sm:w-full lg:w-auto flex-1">
+                <div className=" lg:w-auto flex-1">
                   <LanguageSelector
                     selectedLang={from}
                     onSelect={setFrom}
@@ -627,7 +627,7 @@ const Translator = () => {
                 >
                   <ArrowLeftRight className="h-5 w-5 sm:h-6 sm:w-6 lg:h-6 lg:w-6" />
                 </button>
-                <div className="w-full sm:w-full lg:w-auto flex-1">
+                <div className=" lg:w-auto flex-1">
                   <LanguageSelector
                     selectedLang={to}
                     onSelect={setTo}

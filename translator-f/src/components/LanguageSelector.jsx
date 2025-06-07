@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useRef, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 
 // Available languages for translation
@@ -39,8 +39,27 @@ export const LanguageSelector = ({ selectedLang, onSelect, isOpen, setIsOpen, se
     flag: "",
   };
 
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+        setSearch("");
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen, setIsOpen, setSearch]);
+
   return (
-    <div className="flex-1 relative">
+    <div className="flex-1 relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="inline-flex w-64 md:w-72 items-center gap-2 sm:gap-3 whitespace-nowrap text-sm sm:text-base font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 dark:focus-visible:ring-purple-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 sm:[&_svg]:size-5 [&_svg]:shrink-0 h-auto p-3 sm:p-4 justify-between backdrop-blur-sm border-2 transition-all duration-300 rounded-xl sm:rounded-2xl min-w-[160px] sm:min-w-[180px] hover:scale-105 shadow-lg bg-white/70 dark:bg-gray-800/70 border-white/60 dark:border-gray-700/60 hover:bg-white/90 dark:hover:bg-gray-700/90 text-gray-800 dark:text-gray-200 hover:text-purple-700 dark:hover:text-purple-400"
