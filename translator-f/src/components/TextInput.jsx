@@ -107,7 +107,7 @@ const TextInput = ({
             <X className="w-6 h-6" />
           </button>
         )}
-        <div className="absolute bottom-4 border p-1 rounded right-4 bottom-2 flex flex-col gap-2">
+        <div className="absolute bottom-4  p-1 rounded right-4 bottom-2 flex flex-col gap-2">
           <div className="flex gap-2">
             <button
               onClick={onMicrophoneToggle}
