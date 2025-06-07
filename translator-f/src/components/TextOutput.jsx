@@ -45,9 +45,9 @@ const TextOutput = ({ text, loading, onCopy, onSpeak }) => {
               </span>
             </div>
           ) : text.startsWith("Error:") ? (
-            <p className="text-red-500 dark:text-red-400 text-center mt-20 text-lg">{text}</p>
+            <p className="text-red-500 dark:text-red-400 pb-14 text-center mt-20 text-lg">{text}</p>
           ) : text ? (
-            <p className="text-gray-900 dark:text-gray-200">{text}</p>
+            <p className="text-gray-900 pb-14 dark:text-gray-200">{text}</p>
           ) : null}
         </div>
         {text && !loading && (

@@ -56,7 +56,7 @@ const TextInput = ({
           ref={textareaRef}
           value={value}
           onChange={(e) => !isUploading && onChange(e.target.value)}
-          className={`flex w-full px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 dark:focus-visible:ring-purple-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-[250px] resize-none rounded-2xl focus:ring-2 focus:ring-purple-500/50 dark:focus:ring-purple-400/50 transition-all duration-300 border-2 pr-16 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 ${
+          className={`flex w-full px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 dark:focus-visible:ring-purple-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-[250px] resize-none rounded-2xl focus:ring-2 focus:ring-purple-500/50 dark:focus:ring-purple-400/50 transition-all duration-300 border-2 pr-12 pb-14 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 ${
             isUploading
               ? "opacity-50 cursor-not-allowed bg-white/90 dark:bg-gray-800/90"
               : isListening
@@ -100,14 +100,14 @@ const TextInput = ({
         {value && !isUploading && (
           <button
             onClick={() => onChange("")}
-            className="absolute top-2 right-4 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+            className="absolute p-1 rounded dark:hover:bg-gray-700 top-2 right-4 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
             aria-label="Clear input"
             disabled={isUploading}
           >
-            <X className="w-4 h-4" />
+            <X className="w-6 h-6" />
           </button>
         )}
-        <div className="absolute bottom-4 right-4 flex flex-col gap-2">
+        <div className="absolute bottom-4 border p-1 rounded right-4 bottom-2 flex flex-col gap-2">
           <div className="flex gap-2">
             <button
               onClick={onMicrophoneToggle}
