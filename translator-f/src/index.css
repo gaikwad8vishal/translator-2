@@ -8,3 +8,44 @@ body {
     color: hsl(var(--foreground));
     transition: background-color 0.3s, color 0.3s;
 }
+
+
+:root {
+  --font-size-base: 1rem; /* Default 16px */
+}
+
+html, body, [class*="text-"] {
+  font-size: var(--font-size-base);
+}
+
+/* Adjust Tailwind text sizes relative to base */
+.text-xs {
+  font-size: calc(var(--font-size-base) * 0.75);
+}
+.text-sm {
+  font-size: calc(var(--font-size-base) * 0.875);
+}
+.text-base {
+  font-size: var(--font-size-base);
+}
+.text-lg {
+  font-size: calc(var(--font-size-base) * 1.125);
+}
+.text-xl {
+  font-size: calc(var(--font-size-base) * 1.25);
+}
+
+
+:root {
+  --font-size-base: 1rem;
+}
+html, body {
+  font-size: var(--font-size-base);
+}
+.no-scroll {
+  overflow: hidden;
+}
+@keyframes slide-down {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
+}

@@ -18,7 +18,7 @@ const TranslationHistory = () => {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
-      navigate("/login");
+      navigate("/signin");
     }
   }, [navigate]);
 
@@ -37,7 +37,7 @@ const TranslationHistory = () => {
       setError(`Error fetching translation history: ${err.message}`);
       setLoading(false);
       if (err.response && err.response.status === 401) {
-        navigate("/login");
+        navigate("/signin");
       }
     }
   };

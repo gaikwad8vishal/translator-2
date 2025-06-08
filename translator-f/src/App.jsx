@@ -7,8 +7,10 @@ import { ThemeProvider } from "./context/ThemeContext";
 import { useNavigate } from "react-router-dom";
 import React, { useEffect } from "react";
 import ChatSidebar from "./components/ChatSidebar";
-import TwoWayCommunication from "./components/LiveChatbar";
+import TwoWayCommunication from "./components/TwoWayCommunication";
 import TranslationHistory from "./components/HistorySidebar";
+import Footer from "./components/Footer";
+import LiveChatbar from "./components/LiveChatbar";
 
 function App() {
   return (
@@ -21,6 +23,7 @@ function App() {
                 <Route path="/" element={<Translator />} />
                 <Route path="/single-device" element={<ChatSidebar />} />
                 <Route path="/conversation" element={<TwoWayCommunication />} />
+                <Route path="/multidevice" element={<LiveChatbar />} />
                 <Route path="/history" element={<TranslationHistory />} />
                 <Route
                   path="/signin"
@@ -40,6 +43,7 @@ function App() {
                 />
               </Routes>
             </main>
+            <Footer/>
           </div>
         </Router>
       </AuthProvider>

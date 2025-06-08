@@ -1,226 +1,263 @@
+
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Mic, MicOff, Sun, Moon, ArrowLeft, Users } from "lucide-react";
+import { Mic, MicOff, ArrowLeft } from "lucide-react";
+import { IoMdSend } from "react-icons/io";
 import { languages } from "../components/constants";
 import { useGeolocation } from "../components/languagebylocation";
 import { useSpeech } from "../components/UseSpeech";
+import Header from "../components/Header";
+import { useTheme } from "../context/ThemeContext";
 
 const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
+const wsURL = "ws://localhost:8080";
 
-const TwoWayCommunication = () => {
-  const [chatHistoryA, setChatHistoryA] = useState([]);
-  const [chatHistoryB, setChatHistoryB] = useState([]);
-  const [inputA, setInputA] = useState("");
-  const [inputB, setInputB] = useState("");
-  const [fromA, setFromA] = useState("en");
-  const [toA, setToA] = useState("hi");
-  const [fromB, setFromB] = useState("hi");
-  const [toB, setToB] = useState("en");
-  const [detectedLanguageA, setDetectedLanguageA] = useState("en");
-  const [detectedLanguageB, setDetectedLanguageB] = useState("hi");
-  const [theme, setTheme] = useState("light");
-  const chatContainerRefA = useRef(null);
-  const chatContainerRefB = useRef(null);
-  const textareaRefA = useRef(null);
-  const textareaRefB = useRef(null);
+const LiveChatbar = () => {
+  const [chatHistory, setChatHistory] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const [roomId, setRoomId] = useState("");
+  const [username, setUsername] = useState("User");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isInRoom, setIsInRoom] = useState(false);
+  const [from, setFrom] = useState("en");
+  const [to, setTo] = useState("hi");
+  const [detectedLanguage, setDetectedLanguage] = useState("hi");
+  const [ws, setWs] = useState(null);
+  const chatContainerRef = useRef(null);
+  const navigate = useNavigate();
+  const { theme } = useTheme();
 
-  const { getUserLanguage: getUserLanguageA, error: geoErrorA, setError: setGeoErrorA } = useGeolocation(setToA, setDetectedLanguageA);
-  const { getUserLanguage: getUserLanguageB, error: geoErrorB, setError: setGeoErrorB } = useGeolocation(setToB, setDetectedLanguageB);
-  const { isListening: isListeningA, startSpeechRecognition: startSpeechA, stopSpeechRecognition: stopSpeechA, error: speechErrorA, setError: setSpeechErrorA } = useSpeech(fromA, (transcript) => setInputA((prev) => prev + transcript));
-  const { isListening: isListeningB, startSpeechRecognition: startSpeechB, stopSpeechRecognition: stopSpeechB, error: speechErrorB, setError: setSpeechErrorB } = useSpeech(fromB, (transcript) => setInputB((prev) => prev + transcript));
+  const { getUserLanguage, error: geoError, setError: setGeoError } = useGeolocation(setTo, setDetectedLanguage);
+  const { isListening, startSpeechRecognition, stopSpeechRecognition, error: speechError, setError: setSpeechError } = useSpeech(from, (transcript) => setChatInput((prev) => prev + transcript));
 
-  // Adjust textarea height
+  // Check authentication status on mount
   useEffect(() => {
-    if (textareaRefA.current) {
-      textareaRefA.current.style.height = "auto";
-      textareaRefA.current.style.height = `${textareaRefA.current.scrollHeight}px`;
-    }
-    if (textareaRefB.current) {
-      textareaRefB.current.style.height = "auto";
-      textareaRefB.current.style.height = `${textareaRefB.current.scrollHeight}px`;
-    }
-  }, [inputA, inputB]);
-
-  // Call geolocation
-  useEffect(() => {
-    getUserLanguageA();
-    getUserLanguageB();
-  }, [getUserLanguageA, getUserLanguageB]);
-
-  // Scroll chat containers
-  useEffect(() => {
-    if (chatContainerRefA.current) {
-      chatContainerRefA.current.scrollTop = chatContainerRefA.current.scrollHeight;
-    }
-    if (chatContainerRefB.current) {
-      chatContainerRefB.current.scrollTop = chatContainerRefB.current.scrollHeight;
-    }
-  }, [chatHistoryA, chatHistoryB]);
-
-  // Toggle theme
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", theme === "dark");
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme(theme === "light" ? "dark" : "light");
-  };
-
-  const handleSendMessage = useCallback(async (speaker, text, fromLang, toLang, setChatHistory, otherSetChatHistory) => {
-    if (!text.trim()) return;
-
-    const messageId = Date.now();
-    const userMessage = { type: "user", text, id: messageId, from: fromLang, to: toLang };
-    setChatHistory((prev) => [...prev, userMessage]);
-
-    try {
-      const response = await axios.post(
-        `${backendURL}/translate/`,
-        { text, from: fromLang, to: toLang },
-        { headers: { "Content-Type": "application/json" } }
-      );
-      const translated = response.data.translatedText;
-      const translatedMessage = {
-        type: "translated",
-        text: translated,
-        id: Date.now() + 1,
-        from: fromLang,
-        to: toLang,
-        originalId: messageId,
-        error: translated.startsWith("Error:") ? translated.replace("Error: ", "") : null,
-      };
-      setChatHistory((prev) => [...prev, translatedMessage]);
-      otherSetChatHistory((prev) => [...prev, userMessage, translatedMessage]);
-    } catch (error) {
-      const errorMessage = {
-        type: "translated",
-        text: `Error: ${error.message}`,
-        id: Date.now() + 1,
-        from: fromLang,
-        to: toLang,
-        originalId: messageId,
-        error: error.message,
-      };
-      setChatHistory((prev) => [...prev, errorMessage]);
-      otherSetChatHistory((prev) => [...prev, userMessage, errorMessage]);
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("token");
+      const storedUsername = localStorage.getItem("name") || "User";
+      if (token && storedUsername !== "User") {
+        setUsername(storedUsername);
+        setIsAuthenticated(true);
+      } else {
+        setIsAuthenticated(false);
+        setUsername("User");
+      }
     }
   }, []);
 
-  const handleLanguageChange = useCallback(
-    async (speaker, msgId, newFrom, newTo, setChatHistory, otherSetChatHistory, fromLang, toLang) => {
-      const history = speaker === "A" ? chatHistoryA : chatHistoryB;
-      const message = history.find((msg) => msg.id === msgId);
-      if (!message) return;
+  // Initialize WebSocket connection
+  useEffect(() => {
+    const websocket = new WebSocket(wsURL);
+    setWs(websocket);
 
-      let originalText;
-      let sourceFrom = newFrom || message.from;
-      let targetTo = newTo || message.to;
+    websocket.onopen = () => {
+      console.log("Connected to WebSocket server");
+    };
 
-      if (message.type === "user") {
-        originalText = message.text;
-      } else {
-        const original = history.find((m) => m.id === message.originalId);
-        if (!original) return;
-        originalText = original.text;
-        sourceFrom = newFrom || original.from;
-      }
-
+    websocket.onmessage = async (event) => {
       try {
-        const response = await axios.post(
-          `${backendURL}/translate/`,
-          { text: originalText, from: sourceFrom, to: targetTo },
-          { headers: { "Content-Type": "application/json" } }
-        );
-        const translated = response.data.translatedText;
+        const message = JSON.parse(event.data);
+        console.log("Received WebSocket message:", message);
 
-        setChatHistory((prev) => {
-          let updatedHistory = prev.map((msg) => {
-            if (msg.id === msgId) {
-              return {
-                ...msg,
-                from: sourceFrom,
-                to: targetTo,
-                text: msg.type === "user" ? msg.text : translated,
-                error: translated.startsWith("Error:") ? translated.replace("Error: ", "") : null,
-              };
+        switch (message.type) {
+          case "roomCreated":
+            setIsInRoom(true);
+            setRoomId(message.roomId);
+            break;
+          case "roomJoined":
+            setIsInRoom(true);
+            setRoomId(message.roomId);
+            break;
+          case "message": {
+            try {
+              const response = await axios.post(
+                `${backendURL}/translate/`,
+                { text: message.content, from: "auto", to: detectedLanguage },
+                { headers: { "Content-Type": "application/json" } }
+              );
+              const translated = response.data.translatedText;
+              setChatHistory((prev) => [
+                ...prev,
+                {
+                  type: "other",
+                  text: translated,
+                  id: Date.now(),
+                  roomId: message.roomId,
+                  timestamp: message.timestamp,
+                  username: "Unknown",
+                },
+              ]);
+            } catch (error) {
+              setChatHistory((prev) => [
+                ...prev,
+                {
+                  type: "error",
+                  text: `Error translating message: ${error.message}`,
+                  id: Date.now(),
+                  roomId: message.roomId,
+                  timestamp: message.timestamp,
+                  username: "Unknown",
+                },
+              ]);
             }
-            if (msg.type === "translated" && msg.originalId === msgId && msg.type === "user") {
-              return {
-                ...msg,
-                text: translated,
-                from: sourceFrom,
-                to: targetTo,
-                error: translated.startsWith("Error:") ? translated.replace("Error: ", "") : null,
-              };
-            }
-            return msg;
-          });
-          return updatedHistory;
-        });
-
-        otherSetChatHistory((prev) => {
-          let updatedHistory = prev.map((msg) => {
-            if (msg.id === msgId || (msg.type === "translated" && msg.originalId === msgId)) {
-              return {
-                ...msg,
-                from: sourceFrom,
-                to: targetTo,
-                text: msg.type === "user" ? msg.text : translated,
-                error: translated.startsWith("Error:") ? translated.replace("Error: ", "") : null,
-              };
-            }
-            return msg;
-          });
-          return updatedHistory;
-        });
+            break;
+          }
+          case "userJoined":
+            setChatHistory((prev) => [
+              ...prev,
+              {
+                type: "system",
+                textContent: `A user joined room ${message.roomId}`,
+                id: Date.now(),
+                roomId: message.roomId,
+              },
+            ]);
+            break;
+          case "userLeft":
+            setChatHistory((prev) => [
+              ...prev,
+              {
+                type: "system",
+                textContent: `A user left room ${message.roomId}`,
+                id: Date.now(),
+                roomId: message.roomId,
+              },
+            ]);
+            break;
+          case "error":
+            setChatHistory((prev) => [
+              ...prev,
+              {
+                type: "error",
+                text: message.textContent,
+                id: Date.now(),
+              },
+            ]);
+            break;
+          default:
+            console.log("Unknown message type:", message.type);
+        }
       } catch (error) {
-        setChatHistory((prev) =>
-          prev.map((msg) =>
-            msg.id === msgId
-              ? {
-                  ...msg,
-                  text: `Error: ${error.message}`,
-                  error: error.message,
-                }
-              : msg
-          )
-        );
-        otherSetChatHistory((prev) =>
-          prev.map((msg) =>
-            msg.id === msgId || (msg.type === "translated" && msg.originalId === msgId)
-              ? {
-                  ...msg,
-                  text: `Error: ${error.message}`,
-                  error: error.message,
-                }
-              : msg
-          )
-        );
+        console.error("Error processing WebSocket message:", error);
       }
-    },
-    [chatHistoryA, chatHistoryB]
-  );
+    };
+
+    websocket.onclose = () => {
+      console.log("Disconnected from WebSocket server");
+      setIsInRoom(false);
+      setWs(null);
+    };
+
+    websocket.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+
+    return () => {
+      websocket.close();
+    };
+  }, []);
+
+  // Get user language based on location
+  useEffect(() => {
+    getUserLanguage();
+  }, [getUserLanguage]);
+
+  // Scroll to bottom of chat
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [chatHistory]);
+
+  // Handle room creation
+  const handleCreateRoom = () => {
+    if (!roomId.trim()) {
+      setChatHistory((prev) => [
+        ...prev,
+        { type: "error", text: "Room ID is required", id: Date.now() },
+      ]);
+      return;
+    }
+    if (!isAuthenticated) {
+      setChatHistory((prev) => [
+        ...prev,
+        { type: "error", text: "Please log in to create a room", id: Date.now() },
+      ]);
+      navigate("/signin");
+      return;
+    }
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "createRoom", roomId }));
+    }
+  };
+
+  // Handle joining a room
+  const handleJoinRoom = () => {
+    if (!roomId.trim()) {
+      setChatHistory((prev) => [
+        ...prev,
+        { type: "error", text: "Room ID is required", id: Date.now() },
+      ]);
+      return;
+    }
+    if (!isAuthenticated) {
+      setChatHistory((prev) => [
+        ...prev,
+        { type: "error", text: "Please log in to join a room", id: Date.now() },
+      ]);
+      navigate("/signin");
+      return;
+    }
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "joinRoom", roomId }));
+    }
+  };
+
+  // Handle sending a message
+  const handleSendMessage = useCallback(async () => {
+    if (!chatInput.trim() || !isInRoom || !ws || ws.readyState !== WebSocket.OPEN) {
+      setChatHistory((prev) => [
+        ...prev,
+        {
+          type: "error",
+          text: !chatInput.trim() ? "Message cannot be empty" : "Not connected to a room",
+          id: Date.now(),
+        },
+      ]);
+      return;
+    }
+
+    const messageId = Date.now();
+    const timestamp = new Date().toISOString();
+    setChatHistory((prev) => [
+      ...prev,
+      { type: "user", text: chatInput, id: messageId, roomId, timestamp, username, from, to: detectedLanguage },
+    ]);
+
+    ws.send(
+      JSON.stringify({
+        type: "sendMessage",
+        roomId,
+        content: chatInput,
+        timestamp,
+      })
+    );
+    setChatInput("");
+  }, [chatInput, isInRoom, ws, roomId, username, from, detectedLanguage]);
+
+  // Handle sign-in redirection
+  const handleSignIn = () => {
+    navigate("/signin");
+  };
 
   return (
-    <div
-      className={`min-h-screen transition-all duration-500 ${
-        theme === "light"
-          ? "bg-gradient-to-br from-purple-100 via-blue-50 to-indigo-100"
-          : "bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900"
-      }`}
-      style={{ overflowY: "auto" }}
-      aria-label="Two-way communication"
-    >
-      <header className="p-6 border-b backdrop-blur-sm border-white/20">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              className="inline-flex items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent h-10 w-10 hover:bg-gray-300 dark:hover:bg-gray-900 rounded-full text-gray-700 dark:hover:text-white"
-              onClick={() => window.history.back()}
-              aria-label="Go back"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
+    <div className="min-h-screen transition-all duration-500 bg-gradient-to-br from-purple-100 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-purple-900 dark:to-indigo-900" style={{ overflowY: "auto" }} aria-label="Group chat section">
+      <Header />
+      <main className="flex-1 p-4 sm:p-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center gap-2 sm:gap-4 mb-4 sm:mb-6">
+            
             <div className="flex items-center gap-2">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -232,195 +269,199 @@ const TwoWayCommunication = () => {
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="h-6 w-6 text-purple-500"
+                className="h-5 w-5 sm:h-6 sm:w-6 text-purple-500 dark:text-purple-300"
               >
-                <path d="m4 6 3-3 3 3"></path>
-                <path d="M7 17V3"></path>
-                <path d="m14 6 3-3 3 3"></path>
-                <path d="M17 17V3"></path>
-                <path d="M4 21h16"></path>
+                <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
               </svg>
-              <h1 className={`text-xl font-bold ${theme === "light" ? "text-gray-900" : "text-white"}`}>
-                Two-Way Communication
-              </h1>
+              <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Group Chat</h1>
             </div>
           </div>
-          <button
-            className="inline-flex items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:text-accent-foreground h-10 w-10 rounded-full transition-all duration-300 hover:scale-110 bg-gray-200 hover:bg-gray-300 text-gray-900 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300"
-            onClick={toggleTheme}
-            aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
-          >
-            {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-          </button>
-        </div>
-      </header>
 
-      {(geoErrorA || speechErrorA || geoErrorB || speechErrorB) && (
-        <div className="text-red-500 text-sm p-6 max-w-6xl mx-auto">
-          {geoErrorA || speechErrorA || geoErrorB || speechErrorB}
-        </div>
-      )}
+          {(geoError || speechError) && (
+            <div className="text-red-500 dark:text-red-400 text-xs sm:text-sm p-4 sm:p-6 max-w-4xl mx-auto">
+              {geoError || speechError}
+            </div>
+          )}
 
-      <main className="p-6">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 h-[calc(100vh-200px)]">
-          {/* Speaker A Panel */}
-          <div className="p-6 rounded-2xl backdrop-blur-sm border bg-white/40 border-white/50">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center">
-                  <Users className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg text-gray-900">Speaker A</h3>
-                  <select
-                    value={fromA}
-                    onChange={(e) => setFromA(e.target.value)}
-                    className={`text-sm p-1 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${theme === "light" ? "bg-white/70 text-gray-900" : "bg-gray-800/50 text-white border-gray-600"}`}
-                    aria-label="Select Speaker A language"
+          <div className="flex flex-col h-[calc(100vh-200px)] sm:h-[calc(100vh-220px)]">
+            {!isAuthenticated ? (
+              <div className="flex flex-col gap-4 p-6 sm:p-8 rounded-2xl backdrop-blur-sm border bg-white/40 dark:bg-gray-800/40 border-white/50 dark:border-gray-700/50 text-gray-600 dark:text-gray-200">
+                <h3 className="font-semibold text-sm sm:text-base">Authentication Required</h3>
+                <p className="text-xs sm:text-sm">Please log in to access the group chat.</p>
+                <button
+                  onClick={handleSignIn}
+                  className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-xs sm:text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-8 sm:h-10 px-3 sm:px-4 py-1 sm:py-2 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
+                  aria-label="Sign In"
+                >
+                  Sign In
+                </button>
+              </div>
+            ) : !isInRoom ? (
+              <div className="flex flex-col gap-4 p-6 sm:p-8 rounded-2xl backdrop-blur-sm border bg-white/40 dark:bg-gray-800/40 border-white/50 dark:border-gray-700/50 text-gray-600 dark:text-gray-200">
+                <h3 className="font-semibold text-sm sm:text-base">Join or Create a Room</h3>
+                <div className="text-xs sm:text-sm">Logged in as: {username}</div>
+                <input
+                  type="text"
+                  value={roomId}
+                  onChange={(e) => setRoomId(e.target.value)}
+                  placeholder="Enter Room ID"
+                  className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-xs sm:text-sm bg-white/70 dark:bg-gray-800/50 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
+                  aria-label="Room ID input"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleCreateRoom}
+                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-xs sm:text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-8 sm:h-10 px-3 sm:px-4 py-1 sm:py-2 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
+                    aria-label="Create room"
                   >
-                    {languages.map((lang) => (
-                      <option key={lang.code} value={lang.code}>
-                        {lang.name}
-                      </option>
-                    ))}
-                  </select>
+                    Create Room
+                  </button>
+                  <button
+                    onClick={handleJoinRoom}
+                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-xs sm:text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-8 sm:h-10 px-3 sm:px-4 py-1 sm:py-2 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
+                    aria-label="Join room"
+                  >
+                    Join Room
+                  </button>
                 </div>
               </div>
-              <button
-                className={`inline-flex items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 w-16 h-16 rounded-full transition-all duration-300 hover:scale-105 ${
-                  isListeningA ? "bg-red-600 hover:bg-red-700" : "bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
-                } text-white shadow-lg`}
-                onClick={() => (isListeningA ? stopSpeechA() : startSpeechA())}
-                aria-label={isListeningA ? "Stop microphone" : "Start microphone"}
-              >
-                {isListeningA ? <Mic className="h-6 w-6" /> : <MicOff className="h-6 w-6" />}
-              </button>
-            </div>
-            <div
-              ref={chatContainerRefA}
-              className="space-y-4 h-96 overflow-y-auto"
-            >
-              {chatHistoryA.length === 0 ? (
-                <p className="text-gray-500 text-center">Start chatting...</p>
-              ) : (
-                chatHistoryA.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex ${msg.type === "user" ? "justify-start" : "justify-end"}`}
-                  >
-                    <div className="max-w-[80%]">
+            ) : (
+              <>
+                <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Room: {roomId} | Username: {username} | Your Language: {languages.find((lang) => lang.code === detectedLanguage)?.name || detectedLanguage}
+                </div>
+                <div ref={chatContainerRef} className="flex-1 space-y-4 mb-4 sm:mb-6 overflow-y-auto">
+                  {chatHistory.length === 0 ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center p-6 sm:p-8 rounded-2xl backdrop-blur-sm border bg-white/40 dark:bg-gray-800/40 border-white/50 dark:border-gray-700/50 text-gray-600 dark:text-gray-200">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="h-12 w-12 mx-auto mb-4 text-purple-500 dark:text-purple-300"
+                        >
+                          <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+                        </svg>
+                        <h3 className="font-semibold mb-2 text-sm sm:text-base">Start Your Group Chat</h3>
+                        <p className="text-xs sm:text-sm">Type a message to begin the conversation!</p>
+                      </div>
+                    </div>
+                  ) : (
+                    chatHistory.map((msg) => (
                       <div
-                        className={`px-3 py-2 rounded-lg text-sm ${
-                          msg.type === "user"
-                            ? "bg-blue-600/80 text-white"
-                            : theme === "light"
-                            ? "bg-white/70 text-gray-900"
-                            : "bg-white/10 text-gray-200"
+                        key={msg.id}
+                        className={`flex ${
+                          msg.type === "user" ? "justify-start" : msg.type === "other" ? "justify-end" : "justify-center"
                         }`}
                       >
-                        {msg.text}
+                        <div
+                          className={`max-w-[70%] sm:max-w-[80%] text-xs sm:text-sm ${
+                            msg.type === "user"
+                              ? "bg-purple-600/80 border-purple-500/50 text-white rounded-lg px-2 py-1 sm:px-3 sm:py-2"
+                              : msg.type === "other"
+                              ? "bg-white/70 dark:bg-gray-800/50 text-gray-900 dark:text-gray-200 rounded-lg px-2 py-1 sm:px-3 sm:py-2"
+                              : "text-gray-600 dark:text-gray-400 italic"
+                          }`}
+                        >
+                          {msg.username && (
+                            <div className="font-semibold text-xs opacity-90">{msg.username}</div>
+                          )}
+                          {msg.text || msg.textContent}
+                          {msg.timestamp && (
+                            <div className="text-xs opacity-70 mt-1">{new Date(msg.timestamp).toLocaleTimeString()}</div>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <div className="p-3 sm:p-4 rounded-2xl backdrop-blur-sm border bg-white/60 dark:bg-gray-800/60 border-white/50 dark:border-gray-700/50">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                      <div className="flex-1">
+                        <label htmlFor="from-lang" className="text-xs text-gray-600 dark:text-gray-400">
+                          From:
+                        </label>
+                        <select
+                          id="from-lang"
+                          value={from}
+                          onChange={(e) => setFrom(e.target.value)}
+                          className="w-full p-1 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-xs sm:text-sm bg-white/70 dark:bg-gray-800/50 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
+                          aria-label="Select source language"
+                        >
+                          {languages.map((lang) => (
+                            <option key={lang.code} value={lang.code}>
+                              {lang.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex-1">
+                        <label htmlFor="to-lang" className="text-xs text-gray-600 dark:text-gray-400">
+                          To:
+                        </label>
+                        <select
+                          id="to-lang"
+                          value={to}
+                          onChange={(e) => setTo(e.target.value)}
+                          className="w-full p-1 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-xs sm:text-sm bg-white/70 dark:bg-gray-800/50 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
+                          aria-label="Select target language"
+                        >
+                          {languages.map((lang) => (
+                            <option key={lang.code} value={lang.code}>
+                              {lang.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 sm:gap-3 items-center">
+                      <div className="flex-1">
+                        <textarea
+                          value={chatInput}
+                          onChange={(e) => setChatInput(e.target.value)}
+                          placeholder="Type your message..."
+                          className="flex w-full rounded-md px-2 py-1 sm:px-3 sm:py-2 text-xs sm:text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 min-h-[50px] sm:min-h-[60px] border-0 resize-none bg-white/70 dark:bg-gray-800/50 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                          onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
+                          aria-label="Chat input"
+                        />
+                      </div>
+                      <div className="flex gap-1 sm:gap-2">
+                        <button
+                          onClick={() => (isListening ? stopSpeechRecognition() : startSpeechRecognition())}
+                          className={`inline-flex items-center justify-center whitespace-nowrap text-xs sm:text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-8 w-8 sm:h-10 sm:w-10 rounded-full transition-all duration-200 ${
+                            isListening
+                              ? "bg-red-600 hover:bg-red-700 text-white"
+                              : "bg-gray-800/20 dark:bg-gray-800/50 hover:bg-gray-800/30 dark:hover:bg-gray-800/70 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300"
+                          }`}
+                          aria-label={isListening ? "Stop microphone" : "Start microphone"}
+                        >
+                          {isListening ? <Mic className="h-4 w-4 sm:h-5 sm:w-5" /> : <MicOff className="h-4 w-4 sm:h-5 sm:w-5" />}
+                        </button>
+                        <button
+                          onClick={handleSendMessage}
+                          className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-xs sm:text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-8 sm:h-10 px-3 sm:px-4 py-1 sm:py-2 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
+                          aria-label="Send message"
+                        >
+                          <IoMdSend className="h-4 w-4 sm:h-5 sm:w-5" />
+                        </button>
                       </div>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
-            <div className="mt-4">
-              <textarea
-                ref={textareaRefA}
-                value={inputA}
-                onChange={(e) => setInputA(e.target.value)}
-                placeholder="Type your message..."
-                className={`w-full rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[60px] border-0 resize-none ${
-                  theme === "light" ? "bg-white/70 text-gray-900 placeholder:text-gray-500" : "bg-gray-800/50 text-white placeholder:text-gray-400"
-                }`}
-                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSendMessage("A", inputA, fromA, toB, setChatHistoryA, setChatHistoryB), setInputA(""))}
-                aria-label="Speaker A input"
-              />
-            </div>
-          </div>
-
-          {/* Speaker B Panel */}
-          <div className="p-6 rounded-2xl backdrop-blur-sm border bg-white/40 border-white/50">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                  <Users className="h-6 w-6 text-white" />
                 </div>
-                <div>
-                  <h3 className="font-bold text-lg text-gray-900">Speaker B</h3>
-                  <select
-                    value={fromB}
-                    onChange={(e) => setFromB(e.target.value)}
-                    className={`text-sm p-1 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${theme === "light" ? "bg-white/70 text-gray-900" : "bg-gray-800/50 text-white border-gray-600"}`}
-                    aria-label="Select Speaker B language"
-                  >
-                    {languages.map((lang) => (
-                      <option key={lang.code} value={lang.code}>
-                        {lang.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <button
-                className={`inline-flex items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 w-16 h-16 rounded-full transition-all duration-300 hover:scale-105 ${
-                  isListeningB ? "bg-red-600 hover:bg-red-700" : "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-                } text-white shadow-lg`}
-                onClick={() => (isListeningB ? stopSpeechB() : startSpeechB())}
-                aria-label={isListeningB ? "Stop microphone" : "Start microphone"}
-              >
-                {isListeningB ? <Mic className="h-6 w-6" /> : <MicOff className="h-6 w-6" />}
-              </button>
-            </div>
-            <div
-              ref={chatContainerRefB}
-              className="space-y-4 h-96 overflow-y-auto"
-            >
-              {chatHistoryB.length === 0 ? (
-                <p className="text-gray-500 text-center">Start chatting...</p>
-              ) : (
-                chatHistoryB.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex ${msg.type === "user" ? "justify-start" : "justify-end"}`}
-                  >
-                    <div className="max-w-[80%]">
-                      <div
-                        className={`px-3 py-2 rounded-lg text-sm ${
-                          msg.type === "user"
-                            ? "bg-purple-600/80 text-white"
-                            : theme === "light"
-                            ? "bg-white/70 text-gray-900"
-                            : "bg-white/10 text-gray-200"
-                        }`}
-                      >
-                        {msg.text}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-            <div className="mt-4">
-              <textarea
-                ref={textareaRefB}
-                value={inputB}
-                onChange={(e) => setInputB(e.target.value)}
-                placeholder="Type your message..."
-                className={`w-full rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 min-h-[60px] border-0 resize-none ${
-                  theme === "light" ? "bg-white/70 text-gray-900 placeholder:text-gray-500" : "bg-gray-800/50 text-white placeholder:text-gray-400"
-                }`}
-                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSendMessage("B", inputB, fromB, toA, setChatHistoryB, setChatHistoryA), setInputB(""))}
-                aria-label="Speaker B input"
-              />
-            </div>
+              </>
+            )}
           </div>
         </div>
-
       </main>
     </div>
   );
 };
 
-export default TwoWayCommunication;
+export default LiveChatbar;

@@ -3,17 +3,14 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
 const HomeSetting = ({ isOpen, onClose }) => {
-  if (!isOpen) return null;
-
-  // State for theme
+  // All hooks at the top, unconditionally
+  const navigate = useNavigate();
   const [theme, setTheme] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("theme") || "light";
     }
     return "light";
   });
-
-  // State for settings toggles
   const [settings, setSettings] = useState({
     autoDetect: true,
     smartTranslation: true,
@@ -30,17 +27,10 @@ const HomeSetting = ({ isOpen, onClose }) => {
     offlineTranslation: false,
     professionalTerms: false,
   });
-
-  // State for sliders
   const [translationQuality, setTranslationQuality] = useState(95);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState("User");
   const [loginWarning, setLoginWarning] = useState("");
-  const navigate = useNavigate();
-  // State for popup
-  const [showPopup, setShowPopup] = useState(false);
-  
-  // State for favorite languages and dropdown
   const [favoriteLanguages, setFavoriteLanguages] = useState([
     { name: "English", flag: "🇺🇸" },
     { name: "Hindi", flag: "🇮🇳" },
@@ -72,7 +62,6 @@ const HomeSetting = ({ isOpen, onClose }) => {
     { code: "ur", name: "Urdu" },
   ];
 
-  // Check authentication status on mount
   useEffect(() => {
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("token");
@@ -82,56 +71,12 @@ const HomeSetting = ({ isOpen, onClose }) => {
     }
   }, []);
 
-  // Toggle handler for settings
-  const toggleSetting = (key) => {
-    setShowPopup(true);
-  };
-
-  // Toggle handler for theme
-  const toggleTheme = () => {
-    setTheme((prev) => {
-      const newTheme = prev === "light" ? "dark" : "light";
-      localStorage.setItem("theme", newTheme);
-      return newTheme;
-    });
-  };
-
-  // Apply theme to document
   useEffect(() => {
     if (typeof window !== "undefined") {
       document.documentElement.classList.toggle("dark", theme === "dark");
     }
   }, [theme]);
 
-  const handleLogout = useCallback(() => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("name");
-    localStorage.removeItem("user");
-    setIsAuthenticated(false);
-    setUsername("User");
-    setLoginWarning("Logged out successfully.");
-    setTimeout(() => {
-      setLoginWarning("");
-      window.location.reload(); // Refresh the page after logout
-    }, 1000);
-  }, []);
-
-  // Placeholder handlers for sign-in and sign-up
-  const handleSignInClick = () => {
-    navigate("/signin");
-  };
-
-  const handleSignUpClick = () => {
-    navigate("/signup");
-  };
-
-  // Slider handler
-  const handleSliderChange = (setter, min, max) => (e) => {
-    const value = Math.max(min, Math.min(max, Number(e.target.value)));
-    setter(value);
-  };
-
-  // Disable background scrolling when sidebar is open
   useEffect(() => {
     if (isOpen) {
       document.body.classList.add("no-scroll");
@@ -143,33 +88,62 @@ const HomeSetting = ({ isOpen, onClose }) => {
     };
   }, [isOpen]);
 
-  // Auto-hide popup after 3 seconds
-  useEffect(() => {
-    if (showPopup) {
-      const timer = setTimeout(() => {
-        setShowPopup(false);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [showPopup]);
+  const toggleTheme = () => {
+    setTheme((prev) => {
+      const newTheme = prev === "light" ? "dark" : "light";
+      localStorage.setItem("theme", newTheme);
+      return newTheme;
+    });
+  };
 
-  // Modified onClose handler
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("name");
+    localStorage.removeItem("user");
+    setIsAuthenticated(false);
+    setUsername("User");
+    setLoginWarning("Logged out successfully.");
+    setTimeout(() => {
+      setLoginWarning("");
+      window.location.reload();
+    }, 1000);
+  }, []);
+
+  const handleSignInClick = () => {
+    navigate("/signin");
+  };
+
+  const handleSignUpClick = () => {
+    navigate("/signup");
+  };
+
+  const handleSliderChange = (setter, min, max) => (e) => {
+    const value = Math.max(min, Math.min(max, Number(e.target.value)));
+    setter(value);
+  };
+
   const handleClose = () => {
     document.body.classList.remove("no-scroll");
     setShowLanguageDropdown(false);
     onClose();
   };
 
-  // Handle adding a language
   const handleAddLanguage = (language) => {
     if (!favoriteLanguages.some((lang) => lang.name === language.name)) {
       setFavoriteLanguages([
         ...favoriteLanguages,
-        { name: language.name, flag: "🌐" }, // Using generic globe emoji as flag
+        { name: language.name, flag: "🌐" },
       ]);
     }
     setShowLanguageDropdown(false);
   };
+
+  const handleHistoryClick = () => {
+    navigate("/history");
+  };
+
+  // Early return after hooks
+  if (!isOpen) return null;
 
   return (
     <div
@@ -179,15 +153,6 @@ const HomeSetting = ({ isOpen, onClose }) => {
       onClick={handleClose}
       aria-hidden="true"
     >
-      {/* Popup Notification */}
-      {showPopup && (
-        <div
-          className="fixed top-12 rounded-xl left-1/2 transform -translate-x-1/2 z-[60] bg-black text-white px-8 py-2 rounded-b-lg shadow-lg animate-slide-down"
-          style={{ animation: "slide-down 0.5s ease-out" }}
-        >
-          <p className="text-sm font-medium">Feature Coming Soon!</p>
-        </div>
-      )}
       {loginWarning && (
         <div
           className="fixed top-12 rounded-xl left-1/2 transform -translate-x-1/2 z-[60] bg-green-600 text-white px-8 py-2 rounded-b-lg shadow-lg animate-slide-down"
@@ -196,7 +161,6 @@ const HomeSetting = ({ isOpen, onClose }) => {
           <p className="text-sm font-medium">{loginWarning}</p>
         </div>
       )}
-
       <div
         role="dialog"
         aria-modal="true"
@@ -277,7 +241,7 @@ const HomeSetting = ({ isOpen, onClose }) => {
                 xmlns="http://www.w3.org/2000/svg"
                 width="24"
                 height="24"
-                viewBox="0 0 24 24"
+                viewBox="0 0 24 20.705"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
@@ -285,7 +249,7 @@ const HomeSetting = ({ isOpen, onClose }) => {
                 strokeLinejoin="round"
                 className="h-4 w-4 text-yellow-500"
               >
-                <path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z" />
+                <path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.165a2.122 2.122 0 0 0-.611-1.879l-3.736-3.636a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z" />
               </svg>
               Favorite Languages
             </h3>
@@ -302,7 +266,7 @@ const HomeSetting = ({ isOpen, onClose }) => {
               ))}
               <button
                 onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
-                className="mt-3 inline-flex items-center gap-2 w-full justify-center rounded-full bg-white/70 dark:bg-gray-800/70 border border-gray-200/60 dark:border-gray-700/50 px-3 py-2 text-xs font-medium text-gray-800 dark:text-white hover:bg-white/90 dark:hover:bg-gray-700/80 hover:scale-105 transition-transform sm:text-sm sm:px-4 sm:py-3"
+                className="mt-3 inline-flex items-center gap-2 w-full justify-center rounded-full bg-white/70 dark:bg-gray-800/70 border border-gray-200/60 dark:border-gray-700/60 px-3 py-2 text-xs font-medium text-gray-800 dark:text-white hover:bg-white/90 dark:hover:bg-gray-700/80 hover:scale-105 transition-transform sm:text-sm sm:px-4 sm:py-3"
                 aria-label="Add language"
               >
                 Add Language
@@ -378,93 +342,9 @@ const HomeSetting = ({ isOpen, onClose }) => {
               </button>
             </div>
           </div>
-          <div>
-            <h3 className="mb-2 flex items-center gap-2 font-medium text-gray-800 dark:text-gray-200 text-sm sm:text-base">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-4 w-4 text-gray-500"
-              >
-                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-                <circle cx="12" cy="12" r="3" />
-              </svg>
-              Advanced Settings
-            </h3>
-            <div className="space-y-2">
-              {[
-                { key: "highAccuracy", label: "High Accuracy Mode" },
-                { key: "realTimeTranslation", label: "Real-time Translation" },
-                { key: "showConfidence", label: "Show Confidence Score" },
-                { key: "cacheTranslations", label: "Cache Translations" },
-                { key: "autoCorrection", label: "Smart Auto-correction" },
-              ].map(({ key, label }) => (
-                <div key={key} className="flex items-center justify-between">
-                  <span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">{label}</span>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={settings[key]}
-                    data-state={settings[key] ? "checked" : "unchecked"}
-                    className={`inline-flex h-6 w-11 items-center rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50 ${
-                      settings[key] ? "bg-purple-500" : "bg-gray-200 dark:bg-gray-700"
-                    }`}
-                    onClick={() => toggleSetting(key)}
-                  >
-                    <span
-                      className={`block h-5 w-5 rounded-full bg-white dark:bg-gray-900 shadow-sm transition-transform ${
-                        settings[key] ? "translate-x-5" : "translate-x-0"
-                      }`}
-                    />
-                  </button>
-                </div>
-              ))}
-              <div className="space-y-1">
-                <label className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">Translation Quality: {translationQuality}%</label>
-                <input
-                  type="range"
-                  min="50"
-                  max="100"
-                  step="1"
-                  value={translationQuality}
-                  onChange={handleSliderChange(setTranslationQuality, 50, 100)}
-                  className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full appearance-none cursor-pointer accent-purple-500"
-                  aria-valuemin="50"
-                  aria-valuemax="100"
-                  aria-valuenow={translationQuality}
-                />
-              </div>
-            </div>
-          </div>
           <div className="p-4 rounded-xl bg-gradient-to-r from-purple-100/20 to-indigo-100/20 dark:from-purple-600/20 dark:to-indigo-600/20 border border-purple-200/50 dark:border-purple-400/50">
-            <h3 className="mb-2 flex items-center gap-2 font-medium text-purple-800 dark:text-purple-200 text-sm sm:text-base">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-4 w-4 text-yellow-500"
-              >
-                <path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z" />
-              </svg>
-              Premium Features
-            </h3>
             <div className="space-y-2">
-              {[
-                { key: "offlineTranslation", label: "Offline Translation" },
-                { key: "professionalTerms", label: "Professional Terminology" },
-              ].map(({ key, label }) => (
+              {[].map(({ key, label }) => (
                 <div key={key} className="flex items-center justify-between">
                   <span className="text-xs sm:text-sm text-purple-700 dark:text-purple-300">{label}</span>
                   <button
@@ -475,7 +355,7 @@ const HomeSetting = ({ isOpen, onClose }) => {
                     className={`inline-flex h-6 w-11 items-center rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50 ${
                       settings[key] ? "bg-purple-500" : "bg-gray-200 dark:bg-gray-700"
                     }`}
-                    onClick={() => toggleSetting(key)}
+                    onClick={() => {}}
                   >
                     <span
                       className={`block h-5 w-5 rounded-full bg-white dark:bg-gray-900 shadow-sm transition-transform ${
@@ -486,12 +366,20 @@ const HomeSetting = ({ isOpen, onClose }) => {
                 </div>
               ))}
               {isAuthenticated ? (
-                <button
-                  onClick={handleLogout}
-                  className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-all duration-300 hover:scale-105 rounded-xl px-4 py-2 text-gray-700 dark:text-gray-200 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/50 border hover:border-red-300/50 dark:hover:border-red-700/50"
-                >
-                  Logout
-                </button>
+                <div className="flex flex-col space-y-2">
+                  <button
+                    onClick={handleLogout}
+                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-all duration-300 hover:scale-105 rounded-xl px-4 py-2 text-gray-700 dark:text-gray-200 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/50 border hover:border-red-300/50 dark:hover:border-red-700/50"
+                  >
+                    Logout
+                  </button>
+                  <button
+                    onClick={handleHistoryClick}
+                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-all duration-300 hover:scale-105 rounded-xl px-4 py-2 text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/50 border hover:border-blue-300/50 dark:hover:border-blue-700/50"
+                  >
+                    History
+                  </button>
+                </div>
               ) : (
                 <div className="flex flex-col space-y-2">
                   <button
