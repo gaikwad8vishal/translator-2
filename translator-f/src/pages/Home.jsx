@@ -689,6 +689,9 @@ const Translator = () => {
                     isUploading={isUploading}
                   />
                 </div>
+                <div className="text-xs border p-1 md:hidden flex items-center gap-2 sm:gap-4 text-gray-500 dark:text-gray-400">
+                  <span>{text.length}/5000 characters</span>
+                </div>
                 <div className="space-y-3 sm:space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1 sm:gap-2">
@@ -728,10 +731,10 @@ const Translator = () => {
                 </div>
               </div>
               <div className="mt-2 sm:mt-5 lg:mt-6 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-3 lg:gap-0">
-                <div className="text-xs flex items-center gap-2 sm:gap-4 text-gray-500 dark:text-gray-400">
-                  <span>{text.length}/15000 characters</span>
+                <div className="text-xs hidden md:inline-flex flex items-center gap-2 sm:gap-4 text-gray-500 dark:text-gray-400">
+                  <span>{text.length}/5000 characters</span>
                 </div>
-                <div className="text-xs text-purple-600 dark:text-purple-300 text-center sm:text-right">
+                <div className="text-xs pt-3 md:pt-1 text-purple-600 dark:text-purple-300 text-center sm:text-right">
                   ✨ Smart Engine • Advanced OCR • Context Analysis • Cultural Adaptation • Multi-variant Output
                 </div>
               </div>
