@@ -689,7 +689,7 @@ const Translator = () => {
                     isUploading={isUploading}
                   />
                 </div>
-                <div className="text-xs border p-1 md:hidden flex items-center gap-2 sm:gap-4 text-gray-500 dark:text-gray-400">
+                <div className="text-xs p-1 md:hidden flex items-center gap-2 sm:gap-4 text-gray-500 dark:text-gray-400">
                   <span>{text.length}/5000 characters</span>
                 </div>
                 <div className="space-y-3 sm:space-y-4">
