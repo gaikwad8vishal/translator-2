@@ -1,4 +1,3 @@
-// languagebylocation.js
 import { useState, useCallback } from "react";
 
 const languages = [
@@ -27,23 +26,44 @@ const languages = [
 
 export const useGeolocation = (setTo, setDetectedLanguage) => {
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false); // Add loading state
+  const [loading, setLoading] = useState(false);
 
   const setFallbackLanguage = useCallback(() => {
+    // Map unsupported browser languages to supported ones
     const browserLang = navigator.language.split("-")[0];
-    const validLang = languages.find((lang) => lang.code === browserLang)?.code || "hi";
+    const languageMap = {
+      zh: "hi", // Map Chinese to Hindi as fallback
+      ja: "en",
+      de: "en",
+      fr: "en",
+      es: "en",
+      it: "en",
+      pt: "en",
+      ru: "en",
+      ko: "en",
+      id: "en",
+      ar: "ur",
+      th: "en",
+      vi: "en",
+      tr: "en",
+    };
+    const validLang = languages.find((lang) => lang.code === browserLang)?.code || languageMap[browserLang] || "hi";
     setDetectedLanguage(validLang);
     setTo(validLang);
-    setLoading(false); // Stop loading when fallback is set
+    setLoading(false);
   }, [setDetectedLanguage, setTo]);
 
   const fetchLocationAndSetLanguage = useCallback(
     async (lat, lon, retries = 3) => {
-      while (retries > 0) {
+      for (let attempt = 1; attempt <= retries; attempt++) {
         try {
           const response = await fetch(
             `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
-            { headers: { "User-Agent": "TranslatorApp/1.0 (your@email.com)" } }
+            {
+              headers: {
+                "User-Agent": "PolyglotPro/1.0 (contact@yourapp.com)", // Replace with your app's details
+              },
+            }
           );
           if (!response.ok) throw new Error(`Nominatim API error: ${response.status}`);
           const data = await response.json();
@@ -120,70 +140,58 @@ export const useGeolocation = (setTo, setDetectedLanguage) => {
           setDetectedLanguage(validLang);
           setTo(validLang);
           setError("");
-          setLoading(false); // Stop loading on success
+          setLoading(false);
           return;
         } catch (error) {
-          retries--;
-          if (retries === 0) {
+          if (attempt === retries) {
             setError("Failed to detect location. Using default language.");
-            setTimeout(() => setError(""), 5000);
+            setTimeout(() => setError(""), 5000); // Show error for 5 seconds
             setFallbackLanguage();
           }
-          await new Promise((resolve) => setTimeout(resolve, 1000 * (4 - retries)));
+          // Exponential backoff: 2s, 4s, 8s
+          await new Promise((resolve) => setTimeout(resolve, Math.pow(2, attempt) * 1000));
         }
       }
     },
     [setDetectedLanguage, setTo, setFallbackLanguage]
   );
 
-  const getUserLanguage = useCallback(
-    (retries = 3) => {
-      setLoading(true); // Start loading
-      if (!navigator.geolocation) {
-        setError("Geolocation is not supported by your browser.");
-        setTimeout(() => setError(""), 2000);
+  const getUserLanguage = useCallback(() => {
+    setLoading(true);
+    if (!navigator.geolocation) {
+      setError("Geolocation is not supported by your browser.");
+      setTimeout(() => setError(""), 5000);
+      setFallbackLanguage();
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        await fetchLocationAndSetLanguage(latitude, longitude);
+      },
+      (error) => {
+        let errorMessage;
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = "Location access denied. Using default language.";
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = "Location unavailable. Using default language.";
+            break;
+          case error.TIMEOUT:
+            errorMessage = "Location request timed out. Using default language.";
+            break;
+          default:
+            errorMessage = "Failed to access location. Using default language.";
+        }
+        setError(errorMessage);
+        setTimeout(() => setError(""), 5000);
         setFallbackLanguage();
-        return;
-      }
+      },
+      { timeout: 10000, maximumAge: 600000, enableHighAccuracy: false } // Reduced timeout, increased cache
+    );
+  }, [fetchLocationAndSetLanguage, setFallbackLanguage]);
 
-      const attemptGeolocation = (attempt) => {
-        navigator.geolocation.getCurrentPosition(
-          async (position) => {
-            const { latitude, longitude } = position.coords;
-            await fetchLocationAndSetLanguage(latitude, longitude);
-          },
-          (error) => {
-            if (error.code === error.POSITION_UNAVAILABLE && attempt < retries) {
-              setTimeout(() => attemptGeolocation(attempt + 1), 2000 * attempt);
-              return;
-            }
-            let errorMessage = "An error occurred while accessing your location.";
-            switch (error.code) {
-              case error.PERMISSION_DENIED:
-                errorMessage = "Please allow location access for better language detection.";
-                break;
-              case error.POSITION_UNAVAILABLE:
-                errorMessage = "Location information unavailable. Using default language.";
-                break;
-              case error.TIMEOUT:
-                errorMessage = "Location request timed out. Try again later.";
-                break;
-              default:
-                errorMessage = "An unexpected error occurred. Using default language.";
-            }
-            setError(errorMessage);
-            setTimeout(() => setError(""), 301);
-            setLoading(false); // Stop loading on error
-            setFallbackLanguage();
-          },
-          { timeout: 30000, maximumAge: 300000, enableHighAccuracy: false }
-        );
-      };
-
-      attemptGeolocation(1);
-    },
-    [fetchLocationAndSetLanguage, setFallbackLanguage]
-  );
-
-  return { getUserLanguage, error, setError, loading }; // Return loading state
+  return { getUserLanguage, error, setError, loading };
 };

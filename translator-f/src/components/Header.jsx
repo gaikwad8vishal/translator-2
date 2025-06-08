@@ -25,15 +25,22 @@ const Header = () => {
     return () => window.removeEventListener("storage-auth-change", checkAuth);
   }, []);
 
+ 
+
+
   const handleLogout = useCallback(() => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("name");
-    localStorage.removeItem("user");
-    setIsAuthenticated(false);
-    setUsername("User");
-    setLoginMessage("Logged out successfully.");
-    setTimeout(() => setLoginMessage(""), 3000);
-  }, []);
+      localStorage.removeItem("token");
+      localStorage.removeItem("name");
+      localStorage.removeItem("user");
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+      setIsAuthenticated(false);
+      setUsername("User");
+      setLoginWarning("Logged out successfully.");
+    }, []);
+
+
 
   const handleSettingsClick = useCallback(() => {
     setIsSettingsOpen((prev) => !prev);

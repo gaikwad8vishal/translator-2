@@ -22,7 +22,7 @@ const LiveChatbar = () => {
   const [isInRoom, setIsInRoom] = useState(false);
   const [from, setFrom] = useState("en");
   const [to, setTo] = useState("hi");
-  const [detectedLanguage, setDetectedLanguage] = useState("hi");
+  const [detectedLanguage, setDetectedLanguage] = useState("mr");
   const [ws, setWs] = useState(null);
   const chatContainerRef = useRef(null);
   const navigate = useNavigate();
@@ -73,7 +73,7 @@ const LiveChatbar = () => {
             try {
               const response = await axios.post(
                 `${backendURL}/translate/`,
-                { text: message.content, from: "auto", to: detectedLanguage },
+                { text: message.content, from: message.from || "en", to: detectedLanguage },
                 { headers: { "Content-Type": "application/json" } }
               );
               const translated = response.data.translatedText;
@@ -252,7 +252,7 @@ const LiveChatbar = () => {
   };
 
   return (
-    <div className="min-h-screen transition-all duration-500 bg-gradient-to-br from-purple-100 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-purple-900 dark:to-indigo-900" style={{ overflowY: "auto" }} aria-label="Group chat section">
+    <div className=" pb-24 min-h-screen transition-all duration-500 bg-gradient-to-br from-purple-100 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-purple-900 dark:to-indigo-900" style={{ overflowY: "auto" }} aria-label="Group chat section">
       <Header />
       <main className="flex-1 p-4 sm:p-6">
         <div className="max-w-4xl mx-auto">
@@ -299,7 +299,6 @@ const LiveChatbar = () => {
             ) : !isInRoom ? (
               <div className="flex flex-col gap-4 p-6 sm:p-8 rounded-2xl backdrop-blur-sm border bg-white/40 dark:bg-gray-800/40 border-white/50 dark:border-gray-700/50 text-gray-600 dark:text-gray-200">
                 <h3 className="font-semibold text-sm sm:text-base">Join or Create a Room</h3>
-                <div className="text-xs sm:text-sm">Logged in as: {username}</div>
                 <input
                   type="text"
                   value={roomId}
@@ -328,7 +327,7 @@ const LiveChatbar = () => {
             ) : (
               <>
                 <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-4">
-                  Room: {roomId} | Username: {username} | Your Language: {languages.find((lang) => lang.code === detectedLanguage)?.name || detectedLanguage}
+                  Room: {roomId} | Your Language: {languages.find((lang) => lang.code === detectedLanguage)?.name || detectedLanguage}
                 </div>
                 <div ref={chatContainerRef} className="flex-1 space-y-4 mb-4 sm:mb-6 overflow-y-auto">
                   {chatHistory.length === 0 ? (
@@ -386,32 +385,14 @@ const LiveChatbar = () => {
                     <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                       <div className="flex-1">
                         <label htmlFor="from-lang" className="text-xs text-gray-600 dark:text-gray-400">
-                          From:
+                          From: 
                         </label>
                         <select
                           id="from-lang"
                           value={from}
                           onChange={(e) => setFrom(e.target.value)}
-                          className="w-full p-1 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-xs sm:text-sm bg-white/70 dark:bg-gray-800/50 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
+                          className="w-24 p-1 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-xs sm:text-sm bg-white/70 dark:bg-gray-800/50 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
                           aria-label="Select source language"
-                        >
-                          {languages.map((lang) => (
-                            <option key={lang.code} value={lang.code}>
-                              {lang.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="flex-1">
-                        <label htmlFor="to-lang" className="text-xs text-gray-600 dark:text-gray-400">
-                          To:
-                        </label>
-                        <select
-                          id="to-lang"
-                          value={to}
-                          onChange={(e) => setTo(e.target.value)}
-                          className="w-full p-1 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-xs sm:text-sm bg-white/70 dark:bg-gray-800/50 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
-                          aria-label="Select target language"
                         >
                           {languages.map((lang) => (
                             <option key={lang.code} value={lang.code}>
