@@ -39,6 +39,38 @@ const HomeSetting = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   // State for popup
   const [showPopup, setShowPopup] = useState(false);
+  
+  // State for favorite languages and dropdown
+  const [favoriteLanguages, setFavoriteLanguages] = useState([
+    { name: "English", flag: "🇺🇸" },
+    { name: "Hindi", flag: "🇮🇳" },
+    { name: "Marathi", flag: "🇮🇳" },
+  ]);
+  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+
+  const languages = [
+    { code: "as", name: "Assamese" },
+    { code: "bn", name: "Bengali" },
+    { code: "en", name: "English" },
+    { code: "gbm", name: "Garhwali" },
+    { code: "gu", name: "Gujarati" },
+    { code: "hi", name: "Hindi" },
+    { code: "kn", name: "Kannada" },
+    { code: "kfy", name: "Kumaoni" },
+    { code: "mai", name: "Maithili" },
+    { code: "ml", name: "Malayalam" },
+    { code: "mr", name: "Marathi" },
+    { code: "mtei", name: "Meitei" },
+    { code: "ne", name: "Nepali" },
+    { code: "or", name: "Odia" },
+    { code: "pa", name: "Punjabi" },
+    { code: "sa", name: "Sanskrit" },
+    { code: "si", name: "Sinhala" },
+    { code: "ta", name: "Tamil" },
+    { code: "te", name: "Telugu" },
+    { code: "tcy", name: "Tulu" },
+    { code: "ur", name: "Urdu" },
+  ];
 
   // Check authentication status on mount
   useEffect(() => {
@@ -124,13 +156,25 @@ const HomeSetting = ({ isOpen, onClose }) => {
   // Modified onClose handler
   const handleClose = () => {
     document.body.classList.remove("no-scroll");
+    setShowLanguageDropdown(false);
     onClose();
+  };
+
+  // Handle adding a language
+  const handleAddLanguage = (language) => {
+    if (!favoriteLanguages.some((lang) => lang.name === language.name)) {
+      setFavoriteLanguages([
+        ...favoriteLanguages,
+        { name: language.name, flag: "🌐" }, // Using generic globe emoji as flag
+      ]);
+    }
+    setShowLanguageDropdown(false);
   };
 
   return (
     <div
       data-state={isOpen ? "open" : "closed"}
-      className="fixed  inset-0 z-50 bg-black/50 backdrop-blur-sm transition-opacity duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm transition-opacity duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
       style={{ pointerEvents: "auto" }}
       onClick={handleClose}
       aria-hidden="true"
@@ -162,7 +206,7 @@ const HomeSetting = ({ isOpen, onClose }) => {
         onClick={(e) => e.stopPropagation()}
         tabIndex={-1}
       >
-        <div className="flex  p-2 flex-col space-y-3">
+        <div className="flex p-2 flex-col space-y-3">
           <h2 className="flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white sm:text-lg">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -212,18 +256,17 @@ const HomeSetting = ({ isOpen, onClose }) => {
           </svg>
         </button>
         {isAuthenticated ? (
-        <div className="flex items-center  justify-between p-1 md:p-2 gap-4">
-          <div className="relative  flex items-center gap-3 px-2 md:px-5 py-2.5 rounded-md border-2 backdrop-blur-xl shadow-xl bg-gradient-to-r from-amber-100/90 via-yellow-50/95 to-orange-100/90 dark:from-amber-900/90 dark:via-yellow-800/95 dark:to-orange-900/90 border-amber-300/60 dark:border-amber-700/60 shadow-amber-200/30 dark:shadow-amber-900/30">
-            <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/10 to-orange-400/10 dark:from-yellow-800/10 dark:to-orange-800/10 rounded-2xl"></div>
-            <Crown className="h-5 w-5 text-yellow-500 dark:text-yellow-300 drop-shadow-lg relative z-10" />
-            <span className="text-sm font-bold relative z-10 text-yellow-700 dark:text-yellow-200">Premium Member</span>
-          </div>
-          <div className="flex items-center gap-2 md:px-4 px-2 py-2 rounded-md border bg-white/80 dark:bg-gray-800/80 border-gray-200/60 dark:border-gray-700/60 text-gray-700 dark:text-gray-200">
+          <div className="flex items-center justify-between p-1 md:p-2 gap-4">
+            <div className="relative flex items-center gap-3 px-2 md:px-5 py-2.5 rounded-md border-2 backdrop-blur-xl shadow-xl bg-gradient-to-r from-amber-100/90 via-yellow-50/95 to-orange-100/90 dark:from-amber-900/90 dark:via-yellow-800/95 dark:to-orange-900/90 border-amber-300/60 dark:border-amber-700/60 shadow-amber-200/30 dark:shadow-amber-900/30">
+              <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/10 to-orange-400/10 dark:from-yellow-800/10 dark:to-orange-800/10 rounded-2xl"></div>
+              <Crown className="h-5 w-5 text-yellow-500 dark:text-yellow-300 drop-shadow-lg relative z-10" />
+              <span className="text-sm font-bold relative z-10 text-yellow-700 dark:text-yellow-200">Premium Member</span>
+            </div>
+            <div className="flex items-center gap-2 md:px-4 px-2 py-2 rounded-md border bg-white/80 dark:bg-gray-800/80 border-gray-200/60 dark:border-gray-700/60 text-gray-700 dark:text-gray-200">
               <UserCheck className="h-4 w-4 text-green-500 dark:text-green-300" />
-                <span className="text-sm font-medium">{username}</span>
+              <span className="text-sm font-medium">{username}</span>
+            </div>
           </div>
-        </div>
-          
         ) : (
           ""
         )}
@@ -246,46 +289,38 @@ const HomeSetting = ({ isOpen, onClose }) => {
               </svg>
               Favorite Languages
             </h3>
-            <div className="space-y-2">
-              {[
-                { name: "English", flag: "🇺🇸" },
-                { name: "Hindi", flag: "🇮🇳" },
-                { name: "marathi", flag: "🇮🇳" },
-              ].map((lang) => (
+            <div className="space-y-2 relative">
+              {favoriteLanguages.map((lang) => (
                 <div
                   key={lang.name}
-                  className="flex items-center justify-between rounded-lg bg-gray-200/50 dark:bg-gray-800/50 p-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300"
+                  className="flex py-3 items-center justify-between rounded-lg bg-gray-200/50 dark:bg-gray-800/50 p-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300"
                 >
                   <span>
                     {lang.name} {lang.flag}
                   </span>
-                  <button
-                    className="p-2 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400"
-                    aria-label={`Remove ${lang.name}`}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M18 6 6 18" />
-                      <path d="M6 6l12 12" />
-                    </svg>
-                  </button>
                 </div>
               ))}
+              <button
+                onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
+                className="mt-3 inline-flex items-center gap-2 w-full justify-center rounded-full bg-white/70 dark:bg-gray-800/70 border border-gray-200/60 dark:border-gray-700/50 px-3 py-2 text-xs font-medium text-gray-800 dark:text-white hover:bg-white/90 dark:hover:bg-gray-700/80 hover:scale-105 transition-transform sm:text-sm sm:px-4 sm:py-3"
+                aria-label="Add language"
+              >
+                Add Language
+              </button>
+              {showLanguageDropdown && (
+                <ul className="absolute z-50 w-full mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-700">
+                  {languages.map((language) => (
+                    <li
+                      key={language.code}
+                      onClick={() => handleAddLanguage(language)}
+                      className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                    >
+                      {language.name}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
-            <button
-              className="mt-3 hidden inline-flex items-center gap-2 rounded-xl bg-white/70 dark:bg-gray-800/70 border border-gray-200/60 dark:border-gray-700/50 px-3 py-2 text-xs font-medium text-gray-800 dark:text-white hover:bg-white/90 dark:hover:bg-gray-700/80 hover:scale-105 transition-transform sm:text-sm sm:px-4 sm:py-3"
-              aria-label="Add language"
-            >
-            </button>
           </div>
           <div>
             <h3 className="mb-2 flex items-center gap-2 font-medium text-gray-800 dark:text-gray-200 text-sm sm:text-base">
@@ -301,7 +336,7 @@ const HomeSetting = ({ isOpen, onClose }) => {
                 strokeLinejoin="round"
                 className="h-4 w-4 text-blue-500"
               >
-                <path d="M12 2a10 10 0 0 1 10 10 10 10 0 0 1-10 10 10 10 0 0 1-10-10 10 10 0 0 1 10-10 M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20 M2 12h20" />
+                <path d="M12 2a10 10 0 0 1 10 10 10 10 0 0 1-10 10 10 0 0 1-10-10 10 0 0 1 10-10 M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20 M2 12h20" />
               </svg>
               Appearance
             </h3>
@@ -400,8 +435,8 @@ const HomeSetting = ({ isOpen, onClose }) => {
                   value={translationQuality}
                   onChange={handleSliderChange(setTranslationQuality, 50, 100)}
                   className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full appearance-none cursor-pointer accent-purple-500"
-                  aria-valuemin={50}
-                  aria-valuemax={100}
+                  aria-valuemin="50"
+                  aria-valuemax="100"
                   aria-valuenow={translationQuality}
                 />
               </div>
