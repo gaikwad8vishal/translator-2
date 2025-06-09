@@ -11,7 +11,7 @@ import Header from "../components/Header";
 import { useTheme } from "../context/ThemeContext";
 
 const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
-const wsURL = "ws://localhost:8080";
+const wsURL = import.meta.env.VITE_WEBSOCKET_URL ||  "ws://localhost:8080";
 
 const LiveChatbar = () => {
   const [chatHistory, setChatHistory] = useState([]);
