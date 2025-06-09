@@ -1,7 +1,4 @@
 
-
-
-
 const axios = require("axios");
 const natural = require("natural");
 
@@ -54,7 +51,7 @@ exports.translateText = async (req, res) => {
     } else if (sentiment === "negative") {
       enhancedText = `${translatedText}`;
     }
-    
+
     res.json({
       translatedText: enhancedText,
       aiSentiment: sentiment // Include sentiment to show AI involvement
