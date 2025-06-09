@@ -10,23 +10,7 @@ const HomeSetting = ({ isOpen, onClose }) => {
     }
     return "light";
   });
-  const [settings, setSettings] = useState({
-    autoDetect: true,
-    smartTranslation: true,
-    contextAnalysis: true,
-    alternativeTranslations: true,
-    culturalAdaptation: true,
-    voiceSettings: true,
-    autoSpeak: false,
-    highAccuracy: true,
-    realTimeTranslation: true,
-    showConfidence: true,
-    cacheTranslations: true,
-    autoCorrection: true,
-    offlineTranslation: false,
-    professionalTerms: false,
-  });
-  const [translationQuality, setTranslationQuality] = useState(95);
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState("User");
   const [loginWarning, setLoginWarning] = useState("");
