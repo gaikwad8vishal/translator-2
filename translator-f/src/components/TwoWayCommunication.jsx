@@ -39,20 +39,28 @@ const TwoWayCommunication = () => {
   const micClickInterval = 2000; // Minimum interval between mic clicks (ms)
   const { theme } = useTheme();
 
-  // State to track if user is manually typing
+  // State to track if user is manually typing and buffer for input
   const isTypingA = useRef(false);
   const isTypingB = useRef(false);
+  const inputBufferA = useRef("");
+  const inputBufferB = useRef("");
 
   // Transcript handlers
   const handleTranscriptA = useCallback((transcript) => {
     if (!isTypingA.current && transcript.trim()) {
-      setInputA((prev) => (prev ? `${prev} ${transcript}` : transcript));
+      inputBufferA.current = inputBufferA.current
+        ? `${inputBufferA.current} ${transcript}`
+        : transcript;
+      setInputA(inputBufferA.current);
     }
   }, []);
 
   const handleTranscriptB = useCallback((transcript) => {
     if (!isTypingB.current && transcript.trim()) {
-      setInputB((prev) => (prev ? `${prev} ${transcript}` : transcript));
+      inputBufferB.current = inputBufferB.current
+        ? `${inputBufferB.current} ${transcript}`
+        : transcript;
+      setInputB(inputBufferB.current);
     }
   }, []);
 
@@ -101,7 +109,7 @@ const TwoWayCommunication = () => {
         };
 
         // Add both original and translated messages to the receiver's chat history
-        otherSetChatHistory((prev) => [...prev, userMessage, translatedMessage]);
+        otherSetChatHistory((prev) => [...prev, translatedMessage]);
 
         const targetLang = languageMap[toLang] || toLang;
         console.log(
@@ -169,6 +177,28 @@ const TwoWayCommunication = () => {
     }
   }, [speechErrorA, speechErrorB]);
 
+  useEffect(() => {
+    if (!isListeningA && inputA.trim()) {
+      const timeout = setTimeout(() => {
+        handleSendMessage("A", inputA, fromA, toB, setChatHistoryA, setChatHistoryB);
+        setInputA("");
+        inputBufferA.current = "";
+      }, 100);
+      return () => clearTimeout(timeout);
+    }
+  }, [isListeningA, inputA, fromA, toB, handleSendMessage]);
+
+  useEffect(() => {
+    if (!isListeningB && inputB.trim()) {
+      const timeout = setTimeout(() => {
+        handleSendMessage("B", inputB, fromB, toA, setChatHistoryB, setChatHistoryA);
+        setInputB("");
+        inputBufferB.current = "";
+      }, 100);
+      return () => clearTimeout(timeout);
+    }
+  }, [isListeningB, inputB, fromB, toA, handleSendMessage]);
+
   const handleMicClickA = useCallback(() => {
     const now = Date.now();
     if (now - lastMicClickRefA.current < micClickInterval) {
@@ -197,7 +227,128 @@ const TwoWayCommunication = () => {
     }
   }, [isListeningB, startSpeechB, stopSpeechB]);
 
-  
+  const handleLanguageChange = useCallback(
+    async (speaker, msgId, newFrom, newTo, setChatHistory, otherSetChatHistory) => {
+      const history = speaker === "A" ? chatHistoryA : chatHistoryB;
+      const message = history.find((msg) => msg.id === msgId);
+      if (!message) return;
+
+      let originalText;
+      let sourceFrom = newFrom || message.from;
+      let targetTo = newTo || message.to;
+
+      if (message.type === "user") {
+        originalText = message.text;
+      } else {
+        const original = history.find((m) => m.id === message.originalId);
+        if (!original) return;
+        originalText = original.text;
+        sourceFrom = newFrom || original.from;
+      }
+
+      try {
+        const response = await axios.post(
+          `${backendURL}/translate/`,
+          { text: originalText, from: sourceFrom, to: targetTo },
+          { headers: { "Content-Type": "application/json" } }
+        );
+
+        const translated = response.data.translatedText;
+
+        // Update sender's chat history (only update the original message's language)
+        setChatHistory((prev) =>
+          prev.map((msg) =>
+            msg.id === msgId
+              ? {
+                  ...msg,
+                  from: sourceFrom,
+                  to: targetTo,
+                }
+              : msg
+          )
+        );
+
+        // Update receiver's chat history (update both original and translated messages)
+        otherSetChatHistory((prev) => {
+          return prev.map((msg) => {
+            if (msg.id === msgId) {
+              return {
+                ...msg,
+                from: sourceFrom,
+                to: targetTo,
+              };
+            }
+            if (msg.type === "translated" && msg.originalId === msgId) {
+              return {
+                ...msg,
+                text: translated,
+                from: sourceFrom,
+                to: targetTo,
+                error: translated.startsWith("Error:") ? translated.replace("Error:", "") : null,
+              };
+            }
+            return msg;
+          });
+        });
+
+        const targetLang = languageMap[targetTo] || targetTo;
+        console.log(
+          `Re-translating for ${speaker === "A" ? "Speaker B" : "Speaker A"} in language: ${targetLang}, text: ${translated}`
+        );
+
+        if (!translated.startsWith("Error:")) {
+          if (speaker === "A") {
+            try {
+              speakTextB(translated, targetLang);
+            } catch (err) {
+              setPersistentError(`Text-to-speech failed for Speaker B: ${err.message}`);
+            }
+          } else {
+            try {
+              speakTextA(translated, targetLang);
+            } catch (err) {
+              setPersistentError(`Text-to-speech failed for Speaker A: ${err.message}`);
+            }
+          }
+        }
+      } catch (error) {
+        // Update sender's chat history with error (only for original message)
+        setChatHistory((prev) =>
+          prev.map((msg) =>
+            msg.id === msgId
+              ? {
+                  ...msg,
+                  from: sourceFrom,
+                  to: targetTo,
+                }
+              : msg
+          )
+        );
+
+        // Update receiver's chat history with error
+        otherSetChatHistory((prev) =>
+          prev.map((msg) =>
+            msg.id === msgId
+              ? {
+                  ...msg,
+                  from: sourceFrom,
+                  to: targetTo,
+                }
+              : msg.type === "translated" && msg.originalId === msgId
+              ? {
+                  ...msg,
+                  text: `Error: ${error.message}`,
+                  error: error.message,
+                }
+              : msg
+          )
+        );
+        setPersistentError(`Translation failed: ${error.message}`);
+      }
+    },
+    [chatHistoryA, chatHistoryB, speakTextA, speakTextB]
+  );
+
   const getLatestMessagePair = (history) => {
     if (history.length === 0) return null;
     const latestUserMessage = history.slice().reverse().find((msg) => msg.type === "user");
@@ -286,20 +437,23 @@ const TwoWayCommunication = () => {
                   value={inputA}
                   onChange={(e) => {
                     isTypingA.current = true;
+                    inputBufferA.current = e.target.value;
                     setInputA(e.target.value);
                   }}
                   onBlur={() => {
                     isTypingA.current = false;
+                    setInputA(inputBufferA.current);
                   }}
                   placeholder="Type your message..."
                   className="w-3/4 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[40px] border-0 resize-none bg-white/70 dark:bg-gray-800/50 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage("A", inputA, fromA, toB, setChatHistoryA, setChatHistoryB);
-                      setInputA("");
-                    }
-                  }}
+                  onKeyDown={(e) =>
+                    e.key === "Enter" &&
+                    !e.shiftKey &&
+                    (e.preventDefault(),
+                    handleSendMessage("A", inputA, fromA, toB, setChatHistoryA, setChatHistoryB),
+                    setInputA(""),
+                    inputBufferA.current = "")
+                  }
                   aria-label="Speaker A input"
                 />
                 <button
@@ -307,6 +461,7 @@ const TwoWayCommunication = () => {
                   onClick={() => {
                     handleSendMessage("A", inputA, fromA, toB, setChatHistoryA, setChatHistoryB);
                     setInputA("");
+                    inputBufferA.current = "";
                   }}
                   disabled={!inputA.trim()}
                   aria-label="Send message for Speaker A"
@@ -353,16 +508,16 @@ const TwoWayCommunication = () => {
           <div className="border-t border-gray-600 dark:border-gray-300 my-2"></div>
 
           {/* Speaker B Panel (Bottom, Unrotated) */}
-          <div className="flex-1 border flex flex-col justify-start p-4">
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-2">
-                <Users className="h-6 w-6 text-purple-500" />
-                <h3 className="font-bold text-lg text-gray-900 dark:text-white">Speaker B</h3>
+          <div className="flex-1 border flex flex-col justify-start p-4">          
+            <div className="flex items-center items-center mb-4 gap-2">
+              <div class="flex items-center gap-2">
+                <Users class="h-6 w-6 text-purple-500"/>
+                <h3 class="font-bold text-lg text-gray-900 dark:text-gray-200">Speaker B</h3>
               </div>
               <select
                 value={fromB}
                 onChange={(e) => setFromB(e.target.value)}
-                className="text-sm p-1 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white/70 dark:bg-gray-800/50 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
+                class="text-sm p-1 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white/70 dark:bg-gray-800/50 text-gray-900 dark:text-gray-200 border-gray-300 dark:border-gray-600"
                 aria-label="Select Speaker B language"
               >
                 {languages.map((lang) => (
@@ -373,61 +528,65 @@ const TwoWayCommunication = () => {
               </select>
             </div>
             {latestMessageB ? (
-              <div className="mb-4">
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">{latestMessageB.user.text}</p>
+              <div class="mb-4">
+                <p class="text-lg font-semibold text-gray-900 dark:text-gray-200">{latestMessageB.user.text}</p>
                 {latestMessageB.translated && (
-                  <p className="text-md text-gray-600 dark:text-gray-300">{latestMessageB.translated.text}</p>
+                  <p class="text-md text-gray-600 dark:text-gray-300">{latestMessageB.translated.text}</p>
                 )}
               </div>
             ) : (
-              <p className="text-gray-500 dark:text-gray-400 text-center mb-4">Tap the microphone to speak...</p>
+              <p class="text-gray-500 dark:text-gray-400 text-center mb-4">Tap the microphone to speak...</p>
             )}
             <button
-              className={`mx-auto flex items-center justify-center w-20 h-20 rounded-full transition-all duration-300 ${
+              class={`mx-auto flex items-center justify-center w-20 h-20 rounded-full transition-all duration-300 ${
                 isListeningB
                   ? "bg-red-600 animate-pulse"
                   : "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-              } text-white shadow-lg`}
+              } text-gray-200 shadow-lg`}
               onClick={handleMicClickB}
               aria-label={isListeningB ? "Stop microphone" : "Start microphone"}
             >
-              {isListeningB ? <Mic className="h-8 w-8" /> : <MicOff className="h-8 w-8" />}
+              {isListeningB ? <Mic class="h-8 w-8" /> : <MicOff class="h-8 w-8" />}
             </button>
             <button
-              className="mt-2 text-sm text-purple-500 dark:text-purple-300"
+              class="mt-2 text-sm text-purple-500 dark:text-purple-300"
               onClick={() => setShowTextInputB(!showTextInputB)}
               aria-label={showTextInputB ? "Hide text input for Speaker B" : "Show text input for Speaker B"}
             >
               {showTextInputB ? "Hide Text Input" : "Show Text Input"}
             </button>
             {showTextInputB && (
-              <div className="mt-2 flex justify-center gap-2">
+              <div class="mt-2 flex justify-center gap-2">
                 <textarea
                   ref={textareaRefB}
                   value={inputB}
                   onChange={(e) => {
                     isTypingB.current = true;
+                    inputBufferB.current = e.target.value;
                     setInputB(e.target.value);
                   }}
                   onBlur={() => {
                     isTypingB.current = false;
+                    setInputB(inputBufferB.current);
                   }}
                   placeholder="Type your message..."
-                  className="w-3/4 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 min-h-[40px] border-0 resize-none bg-white/70 dark:bg-gray-800/50 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage("B", inputB, fromB, toA, setChatHistoryB, setChatHistoryA);
-                      setInputB("");
-                    }
-                  }}
+                  class="w-3/4 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 min-h-[40px] border-0 resize-none bg-white/70 dark:bg-gray-800/50 text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                  onKeyDown={(e) =>
+                    e.key === "Enter" &&
+                    !e.shiftKey &&
+                    (e.preventDefault(),
+                    handleSendMessage("B", inputB, fromB, toA, setChatHistoryB, setChatHistoryA),
+                    setInputB(""),
+                    inputBufferB.current = "")
+                  }
                   aria-label="Speaker B input"
                 />
                 <button
-                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-full p-3 transition-all duration-300 hover:scale-105"
+                  class="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-gray-200 rounded-full p-3 transition-all duration-300 hover:scale-105"
                   onClick={() => {
                     handleSendMessage("B", inputB, fromB, toA, setChatHistoryB, setChatHistoryA);
                     setInputB("");
+                    inputBufferB.current = "";
                   }}
                   disabled={!inputB.trim()}
                   aria-label="Send message for Speaker B"
@@ -442,7 +601,7 @@ const TwoWayCommunication = () => {
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className="h-6 w-6"
+                    class="h-6 w-6"
                   >
                     <line x1="22" y1="2" x2="11" y2="13"></line>
                     <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
@@ -450,16 +609,16 @@ const TwoWayCommunication = () => {
                 </button>
               </div>
             )}
-            <div ref={chatContainerRefB} className="mt-4 max-h-40 overflow-y-auto space-y-2">
+            <div ref={chatContainerRefB} class="mt-4 max-h-40 overflow-y-auto space-y-2">
               {chatHistoryB.map((msg) => (
                 <div
                   key={msg.id}
-                  className={`flex ${msg.type === "user" ? "justify-start" : "justify-end"}`}
+                  class={`flex ${msg.type === "user" ? "justify-start" : "justify-end"}`}
                 >
                   <div
-                    className={`max-w-[70%] px-3 py-2 rounded-lg text-sm ${
+                    class={`max-w-[70%] px-3 py-2 rounded-lg text-sm ${
                       msg.type === "user"
-                        ? "bg-green-500 text-white"
+                        ? "bg-green-500 text-gray-200"
                         : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-200"
                     }`}
                   >
