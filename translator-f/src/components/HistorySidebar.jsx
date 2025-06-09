@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Search, Calendar, Download, History, Trash2,Moon, Sun } from "lucide-react";
+import { ArrowLeft, Search, Calendar, Download, History, Trash2, Moon, Sun } from "lucide-react";
 import { languages } from "../components/constants";
+import { useTheme } from "../context/ThemeContext";
+import Header from "./Header";
 
 const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
 
@@ -11,8 +13,8 @@ const TranslationHistory = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [theme, setTheme] = useState("light");
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme(); // Use ThemeContext
 
   // Check authentication
   useEffect(() => {
@@ -45,15 +47,6 @@ const TranslationHistory = () => {
   useEffect(() => {
     fetchHistory();
   }, []);
-
-  // Toggle theme
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", theme === "dark");
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme(theme === "light" ? "dark" : "light");
-  };
 
   // Delete history item
   const deleteHistoryItem = async (id) => {
@@ -120,6 +113,7 @@ const TranslationHistory = () => {
       style={{ overflowY: "auto" }}
       aria-label="Translation history page"
     >
+      <Header/>
       <header className="p-6 border-b backdrop-blur-sm border-white/20">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -137,13 +131,6 @@ const TranslationHistory = () => {
               </h1>
             </div>
           </div>
-          <button
-            className="inline-flex items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:text-accent-foreground h-10 w-10 rounded-full transition-all duration-300 hover:scale-110 bg-gray-200 hover:bg-gray-300 text-gray-900 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300"
-            onClick={toggleTheme}
-            aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
-          >
-            {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-          </button>
         </div>
       </header>
 
@@ -229,7 +216,7 @@ const TranslationHistory = () => {
                         ⭐
                       </button>
                       <button
-                        className="inline-flex items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 h-9 rounded-md px-3 hover:bg-gray-200  dark:hover:bg-gray-200 text-red-500 hover:text-red-600"
+                        className="inline-flex items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 h-9 rounded-md px-3 hover:bg-gray-200 dark:hover:bg-gray-200 text-red-500 hover:text-red-600"
                         onClick={() => deleteHistoryItem(item._id)}
                         aria-label="Delete history item"
                       >

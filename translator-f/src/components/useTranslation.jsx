@@ -1,19 +1,13 @@
 import { useState, useCallback } from "react";
 import axios from "axios";
 
-
-
-
 const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
-
 
 export const useTranslation = () => {
   const [translatedText, setTranslatedText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [history, setHistory] = useState([]);
-
-
 
   const translateText = useCallback(async (inputText, from, to) => {
     if (!inputText.trim()) {
@@ -36,19 +30,22 @@ export const useTranslation = () => {
         setTranslatedText("");
       } else {
         setTranslatedText(translated);
-      }
-      const token = localStorage.getItem("token");
-      if (token) {
-        try {
-          await axios.post(
-            `${backendURL}/history/save`,
-            { input: inputText, translation: translated, from, to },
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          setHistory((prev) => [{ input: inputText, translation: translated, from, to, _id: Date.now() }, ...prev]);
-        } catch (historyError) {
-          console.error("Failed to save history:", historyError.message);
-        }
+        // Delay saving to history by 500ms
+        setTimeout(async () => {
+          const token = localStorage.getItem("token");
+          if (token) {
+            try {
+              await axios.post(
+                `${backendURL}/history/save`,
+                { input: inputText, translation: translated, from, to },
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+              setHistory((prev) => [{ input: inputText, translation: translated, from, to, _id: Date.now() }, ...prev]);
+            } catch (historyError) {
+              console.error("Failed to save history:", historyError.message);
+            }
+          }
+        }, 500);
       }
     } catch (error) {
       setError(error.response?.data?.error || error.message);
