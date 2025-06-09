@@ -6,11 +6,41 @@ export const useSpeech = (lang, onResult) => {
   const [error, setError] = useState("");
   const [availableVoices, setAvailableVoices] = useState([]);
   const recognitionRef = useRef(null);
+  const retryCountRef = useRef(0);
+  const maxRetries = 3;
+  const lastStartAttemptRef = useRef(0);
+  const minStartInterval = 2000; // Minimum interval between start attempts (ms)
+
+  // Supported language codes for speech recognition and synthesis (restricted to widely supported languages)
+  const supportedLangMap = {
+    ar: "ar-SA",
+    bn: "bn-IN",
+    de: "de-DE",
+    en: "en-US",
+    es: "es-ES",
+    fr: "fr-FR",
+    gu: "gu-IN",
+    hi: "hi-IN",
+    it: "it-IT",
+    ja: "ja-JP",
+    kn: "kn-IN",
+    ko: "ko-KR",
+    ml: "ml-IN",
+    mr: "mr-IN",
+    or: "or-IN",
+    pa: "pa-IN",
+    pt: "pt-BR",
+    ru: "ru-RU",
+    ta: "ta-IN",
+    te: "te-IN",
+    zh: "zh-CN",
+  };
 
   useEffect(() => {
     const updateVoices = () => {
       const voices = window.speechSynthesis.getVoices();
       setAvailableVoices(voices);
+      console.log("Available voices:", voices.map(v => v.lang));
     };
     updateVoices();
     window.speechSynthesis.onvoiceschanged = updateVoices;
@@ -19,28 +49,76 @@ export const useSpeech = (lang, onResult) => {
     };
   }, []);
 
+  // Monitor network status changes
+  useEffect(() => {
+    const handleOnline = () => {
+      console.log("Network online");
+      setError(""); // Clear any offline error
+    };
+    const handleOffline = () => {
+      console.log("Network offline");
+      setError("No internet connection. Speech recognition paused.");
+      setIsListening(false);
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
   const startSpeechRecognition = useCallback(() => {
+    // Prevent rapid successive start attempts
+    const now = Date.now();
+    if (now - lastStartAttemptRef.current < minStartInterval) {
+      console.log("Speech recognition start attempt throttled");
+      return;
+    }
+    lastStartAttemptRef.current = now;
+
+    // Check internet connectivity
+    if (!navigator.onLine) {
+      setError("No internet connection. Please check your network.");
+      setTimeout(() => setError(""), 5000);
+      return;
+    }
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       setError("Speech recognition is not supported in your browser.");
-      setTimeout(() => setError(""), 3000);
+      setTimeout(() => setError(""), 5000);
       return;
     }
 
     if (isListening) {
+      console.log("Speech recognition already active");
       return;
+    }
+
+    // Map language to supported code or fallback to en-US
+    const speechLang = lang === "auto" ? "en-US" : supportedLangMap[lang] || "en-US";
+    if (!supportedLangMap[lang]) {
+      console.warn(`Language ${lang} not supported for speech recognition, falling back to en-US`);
+      setError(`Language ${lang} not supported. Using English (US).`);
+      setTimeout(() => setError(""), 5000);
     }
 
     const recognition = new SpeechRecognition();
     recognitionRef.current = recognition;
-    recognition.lang = lang === "auto" ? "en-US" : `${lang}-${lang.toUpperCase()}`;
+    recognition.lang = speechLang;
     recognition.interimResults = false;
     recognition.continuous = false;
 
     recognition.onresult = (event) => {
       const finalTranscript = event.results[0][0].transcript;
+      console.log(`Speech recognition result: ${finalTranscript} (lang: ${speechLang})`);
       onResult(finalTranscript);
       recognition.stop();
+      retryCountRef.current = 0; // Reset retry count on success
     };
 
     recognition.onerror = (event) => {
@@ -57,27 +135,47 @@ export const useSpeech = (lang, onResult) => {
           break;
         case "network":
           errorMessage = "Network error. Please check your internet connection.";
+          if (retryCountRef.current < maxRetries) {
+            retryCountRef.current += 1;
+            // Exponential backoff: 1.5s, 3s, 6s
+            const retryDelay = 1500 * Math.pow(2, retryCountRef.current - 1);
+            console.log(`Retrying speech recognition (${retryCountRef.current}/${maxRetries}) in ${retryDelay}ms`);
+            setTimeout(() => startSpeechRecognition(), retryDelay);
+            return;
+          }
           break;
         default:
           errorMessage = `Speech recognition error: ${event.error}`;
       }
+      console.error(`Speech recognition error: ${event.error}, lang: ${speechLang}, details:`, event);
       setError(errorMessage);
-      setTimeout(() => setError(""), 3000);
+      setTimeout(() => setError(""), 5000);
       setIsListening(false);
+      retryCountRef.current = 0; // Reset retry count on final failure
     };
 
     recognition.onend = () => {
+      console.log("Speech recognition ended");
       setIsListening(false);
     };
 
-    recognition.start();
-    setIsListening(true);
+    console.log(`Starting speech recognition with language: ${speechLang}`);
+    try {
+      recognition.start();
+      setIsListening(true);
+    } catch (err) {
+      console.error("Failed to start speech recognition:", err);
+      setError("Failed to start speech recognition. Please try again.");
+      setTimeout(() => setError(""), 5000);
+      setIsListening(false);
+    }
   }, [lang, onResult, isListening]);
 
   const stopSpeechRecognition = useCallback(() => {
     if (recognitionRef.current) {
       recognitionRef.current.stop();
       setIsListening(false);
+      retryCountRef.current = 0; // Reset retry count
     }
   }, []);
 
@@ -85,7 +183,7 @@ export const useSpeech = (lang, onResult) => {
     (textToSpeak, lang) => {
       if (!window.speechSynthesis) {
         setError("Speech synthesis is not supported in your browser.");
-        setTimeout(() => setError(""), 3000);
+        setTimeout(() => setError(""), 5000);
         return;
       }
 
@@ -94,7 +192,7 @@ export const useSpeech = (lang, onResult) => {
 
       if (!textToSpeak.trim()) {
         setError("No text to read aloud.");
-        setTimeout(() => setError(""), 3000);
+        setTimeout(() => setError(""), 5000);
         return;
       }
 
@@ -103,36 +201,7 @@ export const useSpeech = (lang, onResult) => {
       }
 
       const utterance = new SpeechSynthesisUtterance(textToSpeak);
-      const langMap = {
-        ar: "ar-SA",
-        as: "as-IN",
-        bn: "bn-IN",
-        brx: "brx-IN",
-        de: "de-DE",
-        en: "en-US",
-        es: "es-ES",
-        fr: "fr-FR",
-        gbm: "gbm-IN",
-        gu: "gu-IN",
-        hi: "hi-IN",
-        it: "it-IT",
-        ja: "ja-JP",
-        kfy: "kfy-IN",
-        kn: "kn-IN",
-        ko: "ko-KR",
-        ml: "ml-IN",
-        mr: "mr-IN",
-        mtei: "mni-IN",
-        or: "or-IN",
-        pa: "pa-IN",
-        pt: "pt-BR",
-        ru: "ru-RU",
-        ta: "ta-IN",
-        tcy: "tcy-IN",
-        te: "te-IN",
-        zh: "zh-CN",
-      };
-      const speechLang = langMap[lang] || "en-US";
+      const speechLang = supportedLangMap[lang] || "en-US";
       utterance.lang = speechLang;
 
       const matchingVoice =
@@ -141,7 +210,8 @@ export const useSpeech = (lang, onResult) => {
       if (matchingVoice) {
         utterance.voice = matchingVoice;
       } else {
-        setError(`No voice available for ${lang}. Falling back to default or install a ${lang} language pack.`);
+        console.warn(`No voice available for ${lang}, falling back to default`);
+        setError(`No voice available for ${lang}. Using default voice.`);
         setTimeout(() => setError(""), 5000);
       }
 
@@ -149,13 +219,21 @@ export const useSpeech = (lang, onResult) => {
         setIsSpeaking(false);
       };
       utterance.onerror = (event) => {
+        console.error("Speech synthesis error:", event);
         setError(`Speech synthesis error: ${event.error}`);
-        setTimeout(() => setError(""), 3000);
+        setTimeout(() => setError(""), 5000);
         setIsSpeaking(false);
       };
 
-      window.speechSynthesis.speak(utterance);
-      setIsSpeaking(true);
+      try {
+        window.speechSynthesis.speak(utterance);
+        setIsSpeaking(true);
+      } catch (err) {
+        console.error("Failed to start speech synthesis:", err);
+        setError("Failed to start speech synthesis. Please try again.");
+        setTimeout(() => setError(""), 5000);
+        setIsSpeaking(false);
+      }
     },
     [availableVoices, isSpeaking, stopSpeechRecognition]
   );
