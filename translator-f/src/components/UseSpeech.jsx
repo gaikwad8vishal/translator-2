@@ -13,27 +13,12 @@ export const useSpeech = (lang, onResult) => {
 
   // Supported language codes for speech recognition and synthesis (restricted to widely supported languages)
   const supportedLangMap = {
-    ar: "ar-SA",
-    bn: "bn-IN",
-    de: "de-DE",
     en: "en-US",
-    es: "es-ES",
-    fr: "fr-FR",
-    gu: "gu-IN",
     hi: "hi-IN",
-    it: "it-IT",
-    ja: "ja-JP",
-    kn: "kn-IN",
-    ko: "ko-KR",
-    ml: "ml-IN",
     mr: "mr-IN",
-    or: "or-IN",
-    pa: "pa-IN",
-    pt: "pt-BR",
-    ru: "ru-RU",
+    kn: "kn-IN",
+    ml: "ml-IN",
     ta: "ta-IN",
-    te: "te-IN",
-    zh: "zh-CN",
   };
 
   useEffect(() => {
