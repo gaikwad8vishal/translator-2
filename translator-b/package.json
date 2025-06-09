@@ -22,6 +22,7 @@
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.14.1",
+    "natural": "^8.1.0",
     "pg": "^8.14.1",
     "react-router-dom": "^7.4.0",
     "socket.io": "^4.8.1",

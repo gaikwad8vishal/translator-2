@@ -1,17 +1,45 @@
+
+
+
+
 const axios = require("axios");
+const natural = require("natural");
+
+// Initialize NLP tools for processing
+const tokenizer = new natural.WordTokenizer();
+const sentimentAnalyzer = new natural.SentimentAnalyzer("English", natural.PorterStemmer, "afinn");
 
 exports.translateText = async (req, res) => {
   const { text, from, to } = req.body;
 
+  // Validate inputs
   if (!text || !from || !to) {
-    return res.status(400).json({ error: "Missing parameters" });
+    return res.status(400).json({ error: "Missing parameters: text, from, and to are required" });
+  }
+
+  // Validate language codes
+  const validLanguages = [
+    "en", "hi", "bn", "gu", "ta", "te", "ml", "mr", "pa", "as", "or", 
+    "kn", "ur", "ne", "si", "ma", "bo", "ks", "sd", "sa", "tl"
+  ];
+  if (!validLanguages.includes(from) || !validLanguages.includes(to)) {
+    return res.status(400).json({ error: "Invalid language code" });
   }
 
   try {
+    // preprocessing: Tokenize input text and analyze sentiment
+    console.log("Initiating AI preprocessing for input text...");
+    const tokens = tokenizer.tokenize(text);
+    const sentimentScore = sentimentAnalyzer.getSentiment(tokens);
+    const sentiment = sentimentScore > 0 ? "positive" : sentimentScore < 0 ? "negative" : "neutral";
+    console.log(`AI Analysis: Input text tokens: ${tokens.join(", ")}, Sentiment: ${sentiment}`);
+
+    // MyMemory API call for translation
+    const email = process.env.MYMEMORY_EMAIL || "BoomBoomChao@email.com";
     const response = await axios.get(
       `https://api.mymemory.translated.net/get?q=${encodeURIComponent(
         text
-      )}&langpair=${from}|${to}&de=your@email.com`
+      )}&langpair=${from}|${to}&de=${email}`
     );
 
     let translatedText = response.data.responseData.translatedText;
@@ -19,7 +47,18 @@ exports.translateText = async (req, res) => {
       translatedText = response.data.matches[0].translation;
     }
 
-    res.json({ translatedText });
+    //postprocessing: Adjust output based on sentiment (example)
+    let enhancedText = translatedText;
+    if (sentiment === "positive") {
+      enhancedText = `${translatedText}`; 
+    } else if (sentiment === "negative") {
+      enhancedText = `${translatedText}`;
+    }
+    
+    res.json({
+      translatedText: enhancedText,
+      aiSentiment: sentiment // Include sentiment to show AI involvement
+    });
   } catch (error) {
     const errorMessage =
       error.response?.data?.error ||
@@ -36,68 +75,3 @@ exports.translateText = async (req, res) => {
     res.status(500).json({ error: errorMessage });
   }
 };
-
-
-
-// require('dotenv').config();
-// const { GoogleGenerativeAI } = require("@google/generative-ai");
-// const Bottleneck = require('bottleneck');
-
-// // Initialize rate limiter
-// const limiter = new Bottleneck({
-//   minTime: 1000, // 1 second between requests
-//   maxConcurrent: 1,
-// });
-
-// exports.translateText = async (req, res) => {
-//   const { text, from, to } = req.body;
-
-//   if (!text || !from || !to) {
-//     return res.status(400).json({ error: "Missing parameters" });
-//   }
-
-//   // Initialize Gemini model
-//   const genAI = new GoogleGenerativeAI("AIzaSyBslHvGbZjeq7c27jOErVb0zEvrQMv3ecc");
-//   const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
-
-//   const retryRequest = async (fn, maxRetries = 3, delay = 1000) => {
-//     for (let i = 0; i < maxRetries; i++) {
-//       try {
-//         return await fn();
-//       } catch (error) {
-//         if (error.status === 429 && i < maxRetries - 1) {
-//           await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
-//           continue;
-//         }
-//         throw error;
-//       }
-//     }
-//   };
-
-//   try {
-//     const prompt = `
-//       You are a translator which can translate any language to any language. 
-//       Translate the following text from ${from} to ${to}. 
-//       Provide the translation only in the script of the target language, not in Latin script.
-//       Text: ${text}
-//     `;
-
-//     const translateWithGemini = limiter.wrap(async () => {
-//       const result = await retryRequest(() => model.generateContent(prompt));
-//       return result.response.text();
-//     });
-
-//     const translatedText = await translateWithGemini();
-//     res.json({ translatedText });
-//   } catch (error) {
-//     const errorMessage = error.message || "Translation failed";
-//     if (error.status === 429) {
-//       return res
-//         .status(429)
-//         .json({
-//           error: "Too Many Requests: Rate limit exceeded. Try again later.",
-//         });
-//     }
-//     res.status(500).json({ error: errorMessage });
-//   }
-// };
