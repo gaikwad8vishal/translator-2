@@ -63,6 +63,7 @@ const TwoWayCommunication = () => {
 
       const messageId = Date.now();
       const userMessage = { type: "user", text, id: messageId, from: fromLang, to: toLang };
+      // Only add the original message to the sender's chat history
       setChatHistory((prev) => [...prev, userMessage]);
 
       try {
@@ -81,7 +82,8 @@ const TwoWayCommunication = () => {
           originalId: messageId,
           error: translated.startsWith("Error:") ? translated.replace("Error:", "") : null,
         };
-        setChatHistory((prev) => [...prev, translatedMessage]);
+
+        // Add both original and translated messages to the receiver's chat history
         otherSetChatHistory((prev) => [...prev, userMessage, translatedMessage]);
 
         const targetLang = languageMap[toLang] || toLang;
@@ -112,7 +114,7 @@ const TwoWayCommunication = () => {
           originalId: messageId,
           error: error.message,
         };
-        setChatHistory((prev) => [...prev, errorMessage]);
+        // Add error message to receiver's chat history only
         otherSetChatHistory((prev) => [...prev, userMessage, errorMessage]);
         setPersistentError(`Translation failed: ${error.message}`);
       }
@@ -193,123 +195,126 @@ const TwoWayCommunication = () => {
   }, [isListeningB, startSpeechB, stopSpeechB]);
 
   const handleLanguageChange = useCallback(
-  async (speaker, msgId, newFrom, newTo, setChatHistory, otherSetChatHistory) => {
-    const history = speaker === "A" ? chatHistoryA : chatHistoryB;
-    const message = history.find((msg) => msg.id === msgId);
-    if (!message) return;
+    async (speaker, msgId, newFrom, newTo, setChatHistory, otherSetChatHistory) => {
+      const history = speaker === "A" ? chatHistoryA : chatHistoryB;
+      const message = history.find((msg) => msg.id === msgId);
+      if (!message) return;
 
-    let originalText;
-    let sourceFrom = newFrom || message.from;
-    let targetTo = newTo || message.to;
+      let originalText;
+      let sourceFrom = newFrom || message.from;
+      let targetTo = newTo || message.to;
 
-    if (message.type === "user") {
-      originalText = message.text;
-    } else {
-      const original = history.find((m) => m.id === message.originalId);
-      if (!original) return;
-      originalText = original.text;
-      sourceFrom = newFrom || original.from;
-    }
+      if (message.type === "user") {
+        originalText = message.text;
+      } else {
+        const original = history.find((m) => m.id === message.originalId);
+        if (!original) return;
+        originalText = original.text;
+        sourceFrom = newFrom || original.from;
+      }
 
-    try {
-      const response = await axios.post(
-        `${backendURL}/translate/`,
-        { text: originalText, from: sourceFrom, to: targetTo },
-        { headers: { "Content-Type": "application/json" } }
-      );
+      try {
+        const response = await axios.post(
+          `${backendURL}/translate/`,
+          { text: originalText, from: sourceFrom, to: targetTo },
+          { headers: { "Content-Type": "application/json" } }
+        );
 
-      const translated = response.data.translatedText;
+        const translated = response.data.translatedText;
 
-      // Update chat history for current speaker
-      setChatHistory((prev) => {
-        return prev.map((msg) => {
-          if (msg.id === msgId) {
-            return {
-              ...msg,
-              from: sourceFrom,
-              to: targetTo,
-              text: msg.type === "user" ? msg.text : translated,
-              error: translated.startsWith("Error:") ? translated.replace("Error:", "") : null,
-            };
-          }
-          if (msg.type === "translated" && msg.originalId === msgId) {
-            return {
-              ...msg,
-              text: translated,
-              from: sourceFrom,
-              to: targetTo,
-              error: translated.startsWith("Error:") ? translated.replace("Error:", "") : null,
-            };
-          }
-          return msg;
+        // Update sender's chat history (only update the original message's language)
+        setChatHistory((prev) =>
+          prev.map((msg) =>
+            msg.id === msgId
+              ? {
+                  ...msg,
+                  from: sourceFrom,
+                  to: targetTo,
+                }
+              : msg
+          )
+        );
+
+        // Update receiver's chat history (update both original and translated messages)
+        otherSetChatHistory((prev) => {
+          return prev.map((msg) => {
+            if (msg.id === msgId) {
+              return {
+                ...msg,
+                from: sourceFrom,
+                to: targetTo,
+              };
+            }
+            if (msg.type === "translated" && msg.originalId === msgId) {
+              return {
+                ...msg,
+                text: translated,
+                from: sourceFrom,
+                to: targetTo,
+                error: translated.startsWith("Error:") ? translated.replace("Error:", "") : null,
+              };
+            }
+            return msg;
+          });
         });
-      });
 
-      // Update chat history for other speaker
-      otherSetChatHistory((prev) => {
-        return prev.map((msg) => {
-          if (msg.id === msgId || (msg.type === "translated" && msg.originalId === msgId)) {
-            return {
-              ...msg,
-              from: sourceFrom,
-              to: targetTo,
-              text: msg.type === "user" ? msg.text : translated,
-              error: translated.startsWith("Error:") ? translated.replace("Error:", "") : null,
-            };
-          }
-          return msg;
-        });
-      });
+        const targetLang = languageMap[targetTo] || targetTo;
+        console.log(
+          `Re-translating for ${speaker === "A" ? "Speaker B" : "Speaker A"} in language: ${targetLang}, text: ${translated}`
+        );
 
-      const targetLang = languageMap[targetTo] || targetTo;
-      console.log(
-        `Re-translating for ${speaker === "A" ? "Speaker B" : "Speaker A"} in language: ${targetLang}, text: ${translated}`
-      );
-
-      if (!translated.startsWith("Error:")) {
-        if (speaker === "A") {
-          try {
-            speakTextB(translated, targetLang);
-          } catch (err) {
-            setPersistentError(`Text-to-speech failed for Speaker B: ${err.message}`);
-          }
-        } else {
-          try {
-            speakTextA(translated, targetLang);
-          } catch (err) {
-            setPersistentError(`Text-to-speech failed for Speaker A: ${err.message}`);
+        if (!translated.startsWith("Error:")) {
+          if (speaker === "A") {
+            try {
+              speakTextB(translated, targetLang);
+            } catch (err) {
+              setPersistentError(`Text-to-speech failed for Speaker B: ${err.message}`);
+            }
+          } else {
+            try {
+              speakTextA(translated, targetLang);
+            } catch (err) {
+              setPersistentError(`Text-to-speech failed for Speaker A: ${err.message}`);
+            }
           }
         }
+      } catch (error) {
+        // Update sender's chat history with error (only for original message)
+        setChatHistory((prev) =>
+          prev.map((msg) =>
+            msg.id === msgId
+              ? {
+                  ...msg,
+                  from: sourceFrom,
+                  to: targetTo,
+                }
+              : msg
+          )
+        );
+
+        // Update receiver's chat history with error
+        otherSetChatHistory((prev) =>
+          prev.map((msg) =>
+            msg.id === msgId
+              ? {
+                  ...msg,
+                  from: sourceFrom,
+                  to: targetTo,
+                }
+              : msg.type === "translated" && msg.originalId === msgId
+              ? {
+                  ...msg,
+                  text: `Error: ${error.message}`,
+                  error: error.message,
+                }
+              : msg
+          )
+        );
+        setPersistentError(`Translation failed: ${error.message}`);
       }
-    } catch (error) {
-      // Update both histories with the error message
-      setChatHistory((prev) =>
-        prev.map((msg) =>
-          msg.id === msgId
-            ? {
-                ...msg,
-                text: `Error: ${error.message}`,
-                error: error.message,
-              }
-            : msg
-        )
-      );
-      otherSetChatHistory((prev) =>
-        prev.map((msg) =>
-          msg.id === msgId || (msg.type === "translated" && msg.originalId === msgId)
-            ? {
-                ...msg,
-                text: `Error: ${error.message}`,
-                error: error.message,
-              }
-            : msg
-        )
-      );
-      setPersistentError(`Translation failed: ${error.message}`);
-    }
-  },
-  [chatHistoryA, chatHistoryB, speakTextA, speakTextB]
-);
+    },
+    [chatHistoryA, chatHistoryB, speakTextA, speakTextB]
+  );
 
   const getLatestMessagePair = (history) => {
     if (history.length === 0) return null;
@@ -370,9 +375,6 @@ const TwoWayCommunication = () => {
             {latestMessageA ? (
               <div className="mb-4">
                 <p className="text-lg font-semibold text-gray-900 dark:text-white">{latestMessageA.user.text}</p>
-                {latestMessageA.translated && (
-                  <p className="text-md text-gray-600 dark:text-gray-300">{latestMessageA.translated.text}</p>
-                )}
               </div>
             ) : (
               <p className="text-gray-500 dark:text-gray-400 text-center mb-4">Tap the microphone to speak...</p>
@@ -384,7 +386,7 @@ const TwoWayCommunication = () => {
                   : "bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
               } text-white shadow-lg`}
               onClick={handleMicClickA}
-              aria-label={isListeningA ? "Stop microphone" : "millimeter Start microphone"}
+              aria-label={isListeningA ? "Stop microphone" : "Start microphone"}
             >
               {isListeningA ? <Mic className="h-8 w-8" /> : <MicOff className="h-8 w-8" />}
             </button>
