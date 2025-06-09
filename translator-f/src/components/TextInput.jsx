@@ -15,8 +15,6 @@ const TextInput = ({
   const textareaRef = useRef(null);
   const [inputHeight, setInputHeight] = useState("auto");
   const [isUploadMenuOpen, setIsUploadMenuOpen] = useState(false);
-  const maxChars = 5000;
-  const charCount = value.length;
 
   useEffect(() => {
     if (textareaRef.current) {
