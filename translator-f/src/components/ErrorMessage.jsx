@@ -11,7 +11,7 @@ const ErrorMessage = ({ error, onClose, onRetry }) => {
   }, [error, onClose]);
 
   return (
-    <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md p-4 rounded-lg shadow-lg bg-red-100 dark:bg-red-900 border border-red-300 dark:border-red-700 flex justify-between items-center animate-slide-in">
+    <div className="fixed bottom-4 z-90 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md p-4 rounded-lg shadow-lg bg-red-100 dark:bg-red-900 border border-red-300 dark:border-red-700 flex justify-between items-center animate-slide-in">
       <p className="text-sm text-red-700 dark:text-red-200">
         {error} {error.includes("unavailable") && "This may be due to a weak signal or another app using the resource."}
       </p>
