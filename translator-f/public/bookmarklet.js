@@ -1,5 +1,7 @@
 (async function () {
   const apiUrl = 'https://translator-2-six.vercel.app/translate/';
+  const fromLang = 'en'; // 🔁 Change as needed or make dynamic
+  const toLang = 'hi';   // 🔁 Change as needed or make dynamic
   const textNodes = [];
 
   function getTextNodes(node) {
@@ -10,7 +12,7 @@
     }
   }
 
-  // Floating translate button
+  // Create floating button
   const btn = document.createElement('button');
   btn.innerText = '🌐';
   Object.assign(btn.style, {
@@ -30,29 +32,28 @@
   });
   document.body.appendChild(btn);
 
-  // On click → send page text to API → replace with translations
   btn.onclick = async () => {
     getTextNodes(document.body);
-    const originalTexts = textNodes.map(n => n.nodeValue);
 
-    try {
-      const res = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ texts: originalTexts }),
-      });
-
-      const data = await res.json();
-      if (Array.isArray(data.translations)) {
-        textNodes.forEach((node, i) => {
-          node.nodeValue = data.translations[i] || node.nodeValue;
+    for (const node of textNodes) {
+      try {
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: node.nodeValue,
+            from: fromLang,
+            to: toLang
+          })
         });
-      } else {
-        alert('Translation failed');
+
+        const data = await res.json();
+        if (data.translatedText) {
+          node.nodeValue = data.translatedText;
+        }
+      } catch (err) {
+        console.error('Error translating:', node.nodeValue, err);
       }
-    } catch (err) {
-      console.error(err);
-      alert('Translation error');
     }
   };
 })();
