@@ -1,5 +1,5 @@
 (async function () {
-  const apiUrl = 'https://translator-2-six.vercel.app/translate';
+  const apiUrl = 'https://translator-2-1.onrender.com/translate/';
   const fromLang = 'en';
   const toLang = 'hi';
   const textNodes = [];
