@@ -54,6 +54,8 @@
           border-radius: 8px;
           border: 1px solid #ccc;
           font-size: 14px;
+          display: none;
+          background: white;
         }
       `;
       document.head.appendChild(style);
@@ -91,7 +93,7 @@
         });
         document.body.appendChild(btn);
 
-        // 🌐 Dropdown
+        // 🌐 Dropdown (hidden by default)
         const select = document.createElement('select');
         select.id = 'lang-select';
 
@@ -103,17 +105,22 @@
           select.appendChild(option);
         });
 
-        select.onchange = (e) => {
-          toLang = e.target.value;
-          localStorage.setItem('preferredTranslationLang', toLang);
-        };
-
+        select.style.display = 'none';
         document.body.appendChild(select);
 
-        // Translate logic
-        btn.onclick = async () => {
-          getTextNodes(document.body);
+        // Icon click → show dropdown
+        btn.onclick = () => {
+          select.style.display = 'block';
+        };
+
+        // Dropdown selection → hide dropdown & translate
+        select.onchange = async (e) => {
+          toLang = e.target.value;
+          localStorage.setItem('preferredTranslationLang', toLang);
+          select.style.display = 'none';
           btn.classList.add('spinning');
+
+          getTextNodes(document.body);
 
           for (const node of textNodes) {
             const text = node.nodeValue.trim();
@@ -140,7 +147,7 @@
         };
       }
 
-      // Always inject if activated
+      // Re-inject after reload
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initUI);
       } else {
