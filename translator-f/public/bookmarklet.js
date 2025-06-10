@@ -1,8 +1,21 @@
 (async function () {
   const apiUrl = 'https://translator-2-1.onrender.com/translate/';
   const fromLang = 'en';
-  const toLang = 'hi';
   const textNodes = [];
+  let toLang = localStorage.getItem('preferredTranslationLang') || 'hi';
+
+  const languages = {
+    hi: 'Hindi',
+    mr: 'Marathi',
+    ta: 'Tamil',
+    te: 'Telugu',
+    gu: 'Gujarati',
+    bn: 'Bengali',
+    kn: 'Kannada',
+    ml: 'Malayalam',
+    ur: 'Urdu',
+    pa: 'Punjabi'
+  };
 
   function getTextNodes(node) {
     if (
@@ -26,21 +39,32 @@
     #translator-btn.spinning {
       animation: spin 1s linear infinite;
     }
+    #lang-select {
+      position: fixed;
+      bottom: 80px;
+      right: 20px;
+      z-index: 9999;
+      padding: 6px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
   `;
   document.head.appendChild(style);
 
   if (typeof axios === 'undefined') {
     const axiosScript = document.createElement('script');
     axiosScript.src = 'https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js';
-    axiosScript.onload = initButton;
+    axiosScript.onload = initUI;
     document.head.appendChild(axiosScript);
   } else {
-    initButton();
+    initUI();
   }
 
-  function initButton() {
+  function initUI() {
     if (document.getElementById('translator-btn')) return;
 
+    // 🌐 Button
     const btn = document.createElement('button');
     btn.id = 'translator-btn';
     btn.innerText = '🌐';
@@ -61,6 +85,26 @@
     });
     document.body.appendChild(btn);
 
+    // 🌐 Dropdown
+    const select = document.createElement('select');
+    select.id = 'lang-select';
+
+    Object.entries(languages).forEach(([code, name]) => {
+      const option = document.createElement('option');
+      option.value = code;
+      option.text = name;
+      if (code === toLang) option.selected = true;
+      select.appendChild(option);
+    });
+
+    select.onchange = (e) => {
+      toLang = e.target.value;
+      localStorage.setItem('preferredTranslationLang', toLang);
+    };
+
+    document.body.appendChild(select);
+
+    // Translate logic
     btn.onclick = async () => {
       getTextNodes(document.body);
       btn.classList.add('spinning');
@@ -91,8 +135,8 @@
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initButton);
+    document.addEventListener('DOMContentLoaded', initUI);
   } else {
-    initButton();
+    initUI();
   }
 })();
