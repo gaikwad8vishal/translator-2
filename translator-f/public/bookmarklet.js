@@ -17,6 +17,7 @@
     }
   }
 
+  // Inject CSS spinner style once
   const style = document.createElement('style');
   style.innerHTML = `
     @keyframes spin {
@@ -29,15 +30,17 @@
   `;
   document.head.appendChild(style);
 
+  // Load Axios only once
   if (typeof axios === 'undefined') {
     const axiosScript = document.createElement('script');
     axiosScript.src = 'https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js';
-    axiosScript.onload = initButton;
+    axiosScript.onload = () => initButton();
     document.head.appendChild(axiosScript);
   } else {
     initButton();
   }
 
+  // Main initializer
   function initButton() {
     if (document.getElementById('translator-btn')) return;
 
@@ -60,6 +63,9 @@
       boxShadow: '0 0 10px rgba(0,0,0,0.3)',
     });
     document.body.appendChild(btn);
+
+    // Mark button as added
+    localStorage.setItem('translatorButtonShown', 'true');
 
     btn.onclick = async () => {
       getTextNodes(document.body);
@@ -88,5 +94,18 @@
 
       btn.classList.remove('spinning');
     };
+  }
+
+  // Ensure icon shows up even on reload
+  const showOnLoad = () => {
+    if (localStorage.getItem('translatorButtonShown') === 'true') {
+      initButton();
+    }
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', showOnLoad);
+  } else {
+    showOnLoad();
   }
 })();
