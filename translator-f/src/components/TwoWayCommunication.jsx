@@ -25,9 +25,9 @@ const LoadingDots = () => {
     <div className="max-w-[70%] px-3 py-2 rounded-lg text-sm bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-200">
       <div className="flex justify-center items-center space-x-2">
         <span className="sr-only">Loading...</span>
-        <div className="dot h-2 w-2 bg-gray-300 dark:bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
-        <div className="dot h-2 w-2 bg-gray-300 dark:bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
-        <div className="dot h-2 w-2 bg-gray-300 dark:bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
+        <div className="dot h-2 w-2 bg-gray-400 dark:bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
+        <div className="dot h-2 w-2 bg-gray-400 dark:bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
+        <div className="dot h-2 w-2 bg-gray-400 dark:bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
       </div>
     </div>
   );
@@ -320,11 +320,6 @@ const TwoWayCommunication = () => {
               {isListeningA ? <Mic className="h-8 w-8" /> : <MicOff className="h-8 w-8" />}
             </button>
             <div ref={chatContainerRefA} className="mt-4 max-h-40 overflow-y-auto space-y-2">
-              {isLoadingA && (
-                <div className="flex justify-end">
-                  <LoadingDots />
-                </div>
-              )}
               {chatHistoryA.map((msg) => (
                 <div
                   key={msg.id}
@@ -341,6 +336,11 @@ const TwoWayCommunication = () => {
                   </div>
                 </div>
               ))}
+              {isLoadingA && (
+                <div className="flex justify-end">
+                  <LoadingDots />
+                </div>
+              )}
             </div>
           </div>
 
@@ -349,7 +349,7 @@ const TwoWayCommunication = () => {
 
           {/* Speaker B Panel (Bottom, Unrotated) */}
           <div className="flex-1 border flex flex-col justify-start p-4">
-            <div className="flex items-center mb-4 gap-2">
+            <div className="flex justify-between items-center mb-4 gap-2">
               <div className="flex items-center gap-2">
                 <Users className="h-6 w-6 text-purple-500" />
                 <h3 className="font-bold text-lg text-gray-900 dark:text-gray-200">Speaker B</h3>
@@ -389,11 +389,7 @@ const TwoWayCommunication = () => {
               {isListeningB ? <Mic className="h-8 w-8" /> : <MicOff className="h-8 w-8" />}
             </button>
             <div ref={chatContainerRefB} className="mt-4 max-h-40 overflow-y-auto space-y-2">
-              {isLoadingB && (
-                <div className="flex justify-end">
-                  <LoadingDots />
-                </div>
-              )}
+
               {chatHistoryB.map((msg) => (
                 <div
                   key={msg.id}
@@ -410,6 +406,11 @@ const TwoWayCommunication = () => {
                   </div>
                 </div>
               ))}
+              {isLoadingB && (
+                <div className="flex justify-end">
+                  <LoadingDots />
+                </div>
+              )}
             </div>
           </div>
         </div>
