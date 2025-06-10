@@ -4,7 +4,6 @@
   const toLang = 'hi';
   const textNodes = [];
 
-  // Collect only readable text nodes
   function getTextNodes(node) {
     if (
       node.nodeType === Node.TEXT_NODE &&
@@ -18,7 +17,6 @@
     }
   }
 
-  // Inject spinner CSS
   const style = document.createElement('style');
   style.innerHTML = `
     @keyframes spin {
@@ -31,7 +29,6 @@
   `;
   document.head.appendChild(style);
 
-  // Load Axios if not already present
   if (typeof axios === 'undefined') {
     const axiosScript = document.createElement('script');
     axiosScript.src = 'https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js';
