@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
 import { Mic, MicOff, ArrowLeft } from "lucide-react";
@@ -9,6 +8,7 @@ import { useSpeech } from "../components/UseSpeech";
 import Header from "../components/Header";
 import { useTheme } from "../context/ThemeContext";
 
+
 const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
 
 const ChatSidebar = () => {
@@ -17,11 +17,12 @@ const ChatSidebar = () => {
   const [from, setFrom] = useState("en");
   const [to, setTo] = useState("hi");
   const [detectedLanguage, setDetectedLanguage] = useState("hi");
+  const [isLoading, setIsLoading] = useState(false); // New state for loading
   const chatContainerRef = useRef(null);
   const { theme } = useTheme();
 
   const { getUserLanguage, error: geoError, setError: setGeoError } = useGeolocation(setTo, setDetectedLanguage);
-  const { isListening, startSpeechRecognition, stopSpeechRecognition, error: speechError, setError: setSpeechError } = useSpeech(from, (transcript) => setChatInput((prev) => prev + transcript));
+  const { isListening, startSpeechRecognition, stopSpeechRecognition, error: speechError, setError: setSpeechError } = useSpeech(from, (transcript) => setChatInput((prev) => prev + (prev ? " " : "") + transcript));
 
   useEffect(() => {
     getUserLanguage();
@@ -40,6 +41,7 @@ const ChatSidebar = () => {
     const userMessage = { type: "user", text: chatInput, id: userMessageId, from, to };
     setChatHistory((prev) => [...prev, userMessage]);
     setChatInput("");
+    setIsLoading(true); // Start loading
 
     try {
       const response = await axios.post(
@@ -48,22 +50,25 @@ const ChatSidebar = () => {
         { headers: { "Content-Type": "application/json" } }
       );
       const translated = response.data.translatedText;
-      if (translated.startsWith("Error:")) {
-        setChatHistory((prev) => [
-          ...prev,
-          { type: "bot", text: `Error: ${translated.replace("Error: ", "")}`, id: Date.now() + 1, from, to, userMessageId },
-        ]);
-      } else {
-        setChatHistory((prev) => [
-          ...prev,
-          { type: "bot", text: translated, id: Date.now() + 1, from, to, userMessageId },
-        ]);
-      }
+      setChatHistory((prev) => [
+        ...prev,
+        {
+          type: "bot",
+          text: translated,
+          id: Date.now() + 1,
+          from,
+          to,
+          userMessageId,
+          error: translated.startsWith("Error:") ? translated.replace("Error: ", "") : null,
+        },
+      ]);
     } catch (error) {
       setChatHistory((prev) => [
         ...prev,
-        { type: "bot", text: `Error: ${error.message}`, id: Date.now() + 1, from, to, userMessageId },
+        { type: "bot", text: `Error: ${error.message}`, id: Date.now() + 1, from, to, userMessageId, error: error.message },
       ]);
+    } finally {
+      setIsLoading(false); // Stop loading
     }
   }, [chatInput, from, to]);
 
@@ -72,20 +77,19 @@ const ChatSidebar = () => {
     if (!message) return;
 
     let originalText;
-    let sourceFrom;
-    let targetTo;
+    let sourceFrom = newFrom || message.from;
+    let targetTo = newTo || message.to;
 
     if (message.type === "user") {
       originalText = message.text;
-      sourceFrom = newFrom || message.from;
-      targetTo = message.to;
     } else {
       const userMessage = chatHistory.find((m) => m.id === message.userMessageId);
       if (!userMessage) return;
       originalText = userMessage.text;
       sourceFrom = newFrom || userMessage.from;
-      targetTo = newTo || message.to;
     }
+
+    setIsLoading(true); // Start loading
 
     try {
       const response = await axios.post(
@@ -100,14 +104,14 @@ const ChatSidebar = () => {
           if (msg.id === msgId) {
             return {
               ...msg,
-              from: newFrom || msg.from,
-              to: newTo || msg.to,
+              from: sourceFrom,
+              to: targetTo,
               text: translated,
               error: translated.startsWith("Error:") ? translated.replace("Error: ", "") : null,
             };
           }
           if (msg.type === "user" && message.type === "bot" && message.userMessageId === msg.id) {
-            return { ...msg, from: newFrom || msg.from };
+            return { ...msg, from: sourceFrom };
           }
           return msg;
         });
@@ -118,8 +122,8 @@ const ChatSidebar = () => {
               return {
                 ...msg,
                 text: translated,
-                from: newFrom || msg.from,
-                to: msg.to,
+                from: sourceFrom,
+                to: targetTo,
                 error: translated.startsWith("Error:") ? translated.replace("Error: ", "") : null,
               };
             }
@@ -137,6 +141,8 @@ const ChatSidebar = () => {
             : msg
         )
       );
+    } finally {
+      setIsLoading(false); // Stop loading
     }
   }, [chatHistory]);
 
@@ -191,58 +197,73 @@ const ChatSidebar = () => {
                       <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
                     </svg>
                     <h3 className="font-semibold mb-2 text-sm sm:text-base">Start Your Conversation</h3>
-                    <p className="text-xs sm:text-sm">Type a message and get instant translations!</p>
+                    <p className="text-xs sm:text-sm">Type or speak a message to get instant translations!</p>
                   </div>
                 </div>
               ) : (
-                chatHistory.map((msg) => (
-                  <div key={msg.id} className={`flex ${msg.type === "user" ? "justify-start" : "justify-end"}`}>
-                    <div className="max-w-[70%] sm:max-w-[80%]">
-                      <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                        {msg.type === "user" ? (
-                          <div>
-                            <select
-                              id={`from-${msg.id}`}
-                              value={msg.from}
-                              onChange={(e) => handleLanguageChange(msg.id, e.target.value, "")}
-                              className="w-full p-2 border rounded-lg focus:outline-none text-xs sm:text-sm bg-white/70 dark:bg-gray-800/50 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
-                            >
-                              {languages.map((lang) => (
-                                <option key={lang.code} value={lang.code}>
-                                  {lang.name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        ) : (
-                          <div>
-                            <select
-                              id={`to-${msg.id}`}
-                              value={msg.to}
-                              onChange={(e) => handleLanguageChange(msg.id, "", e.target.value)}
-                              className="w-full p-2 border rounded-lg focus:outline-none text-gray-900 dark:text-gray-300 text-xs sm:text-sm bg-white/70 dark:bg-gray-800/50 border-gray-300 dark:border-gray-600"
-                            >
-                              {languages.map((lang) => (
-                                <option key={lang.code} value={lang.code}>
-                                  {lang.name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
-                      </div>
-                      <div
-                        className={`px-2 py-1 sm:p-2 rounded-lg text-xs sm:text-sm ${
-                          msg.type === "user"
-                            ? "bg-purple-600/80 text-white border-blue-500"
-                            : "bg-white/70 dark:bg-gray-800 text-gray-900 dark:text-white"
-                        }`}
-                      >
-                        {msg.text}
+                <>
+                  {chatHistory.map((msg) => (
+                    <div key={msg.id} className={`flex ${msg.type === "user" ? "justify-start" : "justify-end"}`}>
+                      <div className="max-w-[70%] sm:max-w-[80%]">
+                        <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                          {msg.type === "user" ? (
+                            <div>
+                              <select
+                                id={`from-${msg.id}`}
+                                value={msg.from}
+                                onChange={(e) => handleLanguageChange(msg.id, e.target.value, "")}
+                                className="w-full p-2 border rounded-lg focus:outline-none text-xs sm:text-sm bg-white/70 dark:bg-gray-800/50 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
+                              >
+                                {languages.map((lang) => (
+                                  <option key={lang.code} value={lang.code}>
+                                    {lang.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          ) : (
+                            <div>
+                              <select
+                                id={`to-${msg.id}`}
+                                value={msg.to}
+                                onChange={(e) => handleLanguageChange(msg.id, "", e.target.value)}
+                                className="w-full p-2 border rounded-lg focus:outline-none text-gray-900 dark:text-gray-300 text-xs sm:text-sm bg-white/70 dark:bg-gray-800/50 border-gray-300 dark:border-gray-600"
+                              >
+                                {languages.map((lang) => (
+                                  <option key={lang.code} value={lang.code}>
+                                    {lang.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+                        </div>
+                        <div
+                          className={`px-2 py-1 sm:p-2 rounded-lg text-xs sm:text-sm ${
+                            msg.type === "user"
+                              ? "bg-purple-600/80 text-white border-blue-500"
+                              : "bg-white/70 dark:bg-gray-800 text-gray-900 dark:text-white"
+                          }`}
+                        >
+                          {msg.text}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  ))}
+                  {isLoading && (
+                    <div className="flex justify-end">
+                      <div className="max-w-[70%] sm:max-w-[80%]">
+                        <div className="px-2 py-1 sm:p-2 rounded-lg text-xs sm:text-sm bg-white/70 dark:bg-gray-800 text-gray-900 dark:text-white">
+                          <span className="inline-flex space-x-1">
+                            <span className="animate-bounce" style={{ animationDelay: "0s" }}>.</span>
+                            <span className="animate-bounce" style={{ animationDelay: "0.2s" }}>.</span>
+                            <span className="animate-bounce" style={{ animationDelay: "0.4s" }}>.</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -293,7 +314,7 @@ const ChatSidebar = () => {
                       onChange={(e) => setChatInput(e.target.value)}
                       placeholder="Type your message..."
                       className="flex w-full rounded-md px-2 py-1 sm:p-2 text-xs sm:text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 min-h-[50px] sm:min-h-[60px] border-0 resize-none bg-white/70 dark:bg-gray-800/50 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
-                      onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
+                      onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSendMessage())}
                       aria-label="Chat input"
                     />
                   </div>
