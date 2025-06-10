@@ -1,18 +1,24 @@
 (async function () {
-  const apiUrl = 'https://translator-2-six.vercel.app/translate/';
+  const apiUrl = 'https://translator-2-six.vercel.app/translate';
   const fromLang = 'en';
   const toLang = 'hi';
   const textNodes = [];
 
+  // Collect only readable text nodes
   function getTextNodes(node) {
-    if (node.nodeType === Node.TEXT_NODE && node.nodeValue.trim()) {
+    if (
+      node.nodeType === Node.TEXT_NODE &&
+      node.nodeValue.trim() &&
+      node.parentNode.nodeName !== 'SCRIPT' &&
+      node.parentNode.nodeName !== 'STYLE'
+    ) {
       textNodes.push(node);
     } else if (node.nodeType === Node.ELEMENT_NODE) {
       for (const child of node.childNodes) getTextNodes(child);
     }
   }
 
-  // Create spinner style
+  // Inject spinner CSS
   const style = document.createElement('style');
   style.innerHTML = `
     @keyframes spin {
@@ -25,8 +31,19 @@
   `;
   document.head.appendChild(style);
 
-  // Create floating translate button if not already present
-  if (!document.getElementById('translator-btn')) {
+  // Load Axios if not already present
+  if (typeof axios === 'undefined') {
+    const axiosScript = document.createElement('script');
+    axiosScript.src = 'https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js';
+    axiosScript.onload = initButton;
+    document.head.appendChild(axiosScript);
+  } else {
+    initButton();
+  }
+
+  function initButton() {
+    if (document.getElementById('translator-btn')) return;
+
     const btn = document.createElement('button');
     btn.id = 'translator-btn';
     btn.innerText = '🌐';
@@ -52,22 +69,23 @@
       btn.classList.add('spinning');
 
       for (const node of textNodes) {
+        const text = node.nodeValue.trim();
+        if (!text || text.length > 1000) continue;
+
         try {
-          const res = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              text: node.nodeValue,
-              from: fromLang,
-              to: toLang
-            })
+          const res = await axios.post(apiUrl, {
+            text,
+            from: fromLang,
+            to: toLang,
           });
-          const data = await res.json();
-          if (data.translatedText) {
-            node.nodeValue = data.translatedText;
+
+          if (res.data?.translatedText) {
+            node.nodeValue = res.data.translatedText;
+          } else {
+            console.warn('⚠️ No translatedText in response for:', text);
           }
         } catch (err) {
-          console.error('Translation failed for:', node.nodeValue, err);
+          console.error('❌ Failed to translate:', text, err.message);
         }
       }
 
