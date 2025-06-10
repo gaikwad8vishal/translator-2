@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
 import { Mic, MicOff, Users } from "lucide-react";
@@ -18,6 +19,20 @@ const languageMap = {
   te: "te",
 };
 
+// LoadingDots component for three-dot loader
+const LoadingDots = () => {
+  return (
+    <div className="max-w-[70%] px-3 py-2 rounded-lg text-sm bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-200">
+      <div className="flex justify-center items-center space-x-2">
+        <span className="sr-only">Loading...</span>
+        <div className="dot h-2 w-2 bg-gray-300 dark:bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
+        <div className="dot h-2 w-2 bg-gray-300 dark:bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
+        <div className="dot h-2 w-2 bg-gray-300 dark:bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
+      </div>
+    </div>
+  );
+};
+
 const TwoWayCommunication = () => {
   const [chatHistoryA, setChatHistoryA] = useState([]);
   const [chatHistoryB, setChatHistoryB] = useState([]);
@@ -28,6 +43,8 @@ const TwoWayCommunication = () => {
   const [fromB, setFromB] = useState("hi");
   const [toB, setToB] = useState("hi");
   const [persistentError, setPersistentError] = useState("");
+  const [isLoadingA, setIsLoadingA] = useState(false); // Loading state for Speaker A's section
+  const [isLoadingB, setIsLoadingB] = useState(false); // Loading state for Speaker B's section
   const chatContainerRefA = useRef(null);
   const chatContainerRefB = useRef(null);
   const lastMicClickRefA = useRef(0);
@@ -87,6 +104,13 @@ const TwoWayCommunication = () => {
       // Only add the original message to the sender's chat history
       setChatHistory((prev) => [...prev, userMessage]);
 
+      // Set loading state for the receiver
+      if (speaker === "A") {
+        setIsLoadingB(true);
+      } else {
+        setIsLoadingA(true);
+      }
+
       try {
         const response = await axios.post(
           `${backendURL}/translate/`,
@@ -138,6 +162,13 @@ const TwoWayCommunication = () => {
         // Add error message to receiver's chat history only
         otherSetChatHistory((prev) => [...prev, userMessage, errorMessage]);
         setPersistentError(`Translation failed: ${error.message}`);
+      } finally {
+        // Reset loading state
+        if (speaker === "A") {
+          setIsLoadingB(false);
+        } else {
+          setIsLoadingA(false);
+        }
       }
     },
     [speakTextA, speakTextB]
@@ -212,127 +243,7 @@ const TwoWayCommunication = () => {
     }
   }, [isListeningB, startSpeechB, stopSpeechB]);
 
-  const handleLanguageChange = useCallback(
-    async (speaker, msgId, newFrom, newTo, setChatHistory, otherSetChatHistory) => {
-      const history = speaker === "A" ? chatHistoryA : chatHistoryB;
-      const message = history.find((msg) => msg.id === msgId);
-      if (!message) return;
 
-      let originalText;
-      let sourceFrom = newFrom || message.from;
-      let targetTo = newTo || message.to;
-
-      if (message.type === "user") {
-        originalText = message.text;
-      } else {
-        const original = history.find((m) => m.id === message.originalId);
-        if (!original) return;
-        originalText = original.text;
-        sourceFrom = newFrom || original.from;
-      }
-
-      try {
-        const response = await axios.post(
-          `${backendURL}/translate/`,
-          { text: originalText, from: sourceFrom, to: targetTo },
-          { headers: { "Content-Type": "application/json" } }
-        );
-
-        const translated = response.data.translatedText;
-
-        // Update sender's chat history (only update the original message's language)
-        setChatHistory((prev) =>
-          prev.map((msg) =>
-            msg.id === msgId
-              ? {
-                  ...msg,
-                  from: sourceFrom,
-                  to: targetTo,
-                }
-              : msg
-          )
-        );
-
-        // Update receiver's chat history (update both original and translated messages)
-        otherSetChatHistory((prev) => {
-          return prev.map((msg) => {
-            if (msg.id === msgId) {
-              return {
-                ...msg,
-                from: sourceFrom,
-                to: targetTo,
-              };
-            }
-            if (msg.type === "translated" && msg.originalId === msgId) {
-              return {
-                ...msg,
-                text: translated,
-                from: sourceFrom,
-                to: targetTo,
-                error: translated.startsWith("Error:") ? translated.replace("Error:", "") : null,
-              };
-            }
-            return msg;
-          });
-        });
-
-        const targetLang = languageMap[targetTo] || targetTo;
-        console.log(
-          `Re-translating for ${speaker === "A" ? "Speaker B" : "Speaker A"} in language: ${targetLang}, text: ${translated}`
-        );
-
-        if (!translated.startsWith("Error:")) {
-          if (speaker === "A") {
-            try {
-              speakTextB(translated, targetLang);
-            } catch (err) {
-              setPersistentError(`Text-to-speech failed for Speaker B: ${err.message}`);
-            }
-          } else {
-            try {
-              speakTextA(translated, targetLang);
-            } catch (err) {
-              setPersistentError(`Text-to-speech failed for Speaker A: ${err.message}`);
-            }
-          }
-        }
-      } catch (error) {
-        // Update sender's chat history with error (only for original message)
-        setChatHistory((prev) =>
-          prev.map((msg) =>
-            msg.id === msgId
-              ? {
-                  ...msg,
-                  from: sourceFrom,
-                  to: targetTo,
-                }
-              : msg
-          )
-        );
-
-        // Update receiver's chat history with error
-        otherSetChatHistory((prev) =>
-          prev.map((msg) =>
-            msg.id === msgId
-              ? {
-                  ...msg,
-                  from: sourceFrom,
-                  to: targetTo,
-                }
-              : msg.type === "translated" && msg.originalId === msgId
-              ? {
-                  ...msg,
-                  text: `Error: ${error.message}`,
-                  error: error.message,
-                }
-              : msg
-          )
-        );
-        setPersistentError(`Translation failed: ${error.message}`);
-      }
-    },
-    [chatHistoryA, chatHistoryB, speakTextA, speakTextB]
-  );
 
   const getLatestMessagePair = (history) => {
     if (history.length === 0) return null;
@@ -409,6 +320,11 @@ const TwoWayCommunication = () => {
               {isListeningA ? <Mic className="h-8 w-8" /> : <MicOff className="h-8 w-8" />}
             </button>
             <div ref={chatContainerRefA} className="mt-4 max-h-40 overflow-y-auto space-y-2">
+              {isLoadingA && (
+                <div className="flex justify-end">
+                  <LoadingDots />
+                </div>
+              )}
               {chatHistoryA.map((msg) => (
                 <div
                   key={msg.id}
@@ -433,9 +349,9 @@ const TwoWayCommunication = () => {
 
           {/* Speaker B Panel (Bottom, Unrotated) */}
           <div className="flex-1 border flex flex-col justify-start p-4">
-            <div className="flex items-center items-center mb-4 gap-2">
+            <div className="flex items-center mb-4 gap-2">
               <div className="flex items-center gap-2">
-                <Users className="h-6 w-6 text-purple-500"/>
+                <Users className="h-6 w-6 text-purple-500" />
                 <h3 className="font-bold text-lg text-gray-900 dark:text-gray-200">Speaker B</h3>
               </div>
               <select
@@ -473,6 +389,11 @@ const TwoWayCommunication = () => {
               {isListeningB ? <Mic className="h-8 w-8" /> : <MicOff className="h-8 w-8" />}
             </button>
             <div ref={chatContainerRefB} className="mt-4 max-h-40 overflow-y-auto space-y-2">
+              {isLoadingB && (
+                <div className="flex justify-end">
+                  <LoadingDots />
+                </div>
+              )}
               {chatHistoryB.map((msg) => (
                 <div
                   key={msg.id}
