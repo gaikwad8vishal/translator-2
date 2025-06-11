@@ -1,7 +1,6 @@
-
 import { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
-import { Mic, MicOff, Users } from "lucide-react";
+import { Mic, MicOff, Users, RotateCw } from "lucide-react";
 import { languages } from "./constants";
 import { useSpeech } from "./UseSpeech";
 import Header from "./Header";
@@ -9,7 +8,6 @@ import { useTheme } from "../context/ThemeContext";
 
 const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
 
-// Language mapping for simplified language codes (matching useSpeech supportedLangMap)
 const languageMap = {
   en: "en",
   hi: "hi",
@@ -19,7 +17,6 @@ const languageMap = {
   te: "te",
 };
 
-// LoadingDots component for three-dot loader
 const LoadingDots = () => {
   return (
     <div className="max-w-[70%] px-3 py-2 rounded-lg text-sm bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-200">
@@ -43,22 +40,20 @@ const TwoWayCommunication = () => {
   const [fromB, setFromB] = useState("hi");
   const [toB, setToB] = useState("hi");
   const [persistentError, setPersistentError] = useState("");
-  const [isLoadingA, setIsLoadingA] = useState(false); // Loading state for Speaker A's section
-  const [isLoadingB, setIsLoadingB] = useState(false); // Loading state for Speaker B's section
+  const [isLoadingA, setIsLoadingA] = useState(false);
+  const [isLoadingB, setIsLoadingB] = useState(false);
+  const [isARotated, setIsARotated] = useState(true); // State for Speaker A rotation
   const chatContainerRefA = useRef(null);
   const chatContainerRefB = useRef(null);
   const lastMicClickRefA = useRef(0);
   const lastMicClickRefB = useRef(0);
-  const micClickInterval = 2000; // Minimum interval between mic clicks (ms)
-  const { theme } = useTheme();
+  const micClickInterval = 2000;
 
-  // State to track if user is manually typing and buffer for input
   const isTypingA = useRef(false);
   const isTypingB = useRef(false);
   const inputBufferA = useRef("");
   const inputBufferB = useRef("");
 
-  // Transcript handlers
   const handleTranscriptA = useCallback((transcript) => {
     if (!isTypingA.current && transcript.trim()) {
       inputBufferA.current = inputBufferA.current
@@ -101,10 +96,8 @@ const TwoWayCommunication = () => {
 
       const messageId = Date.now();
       const userMessage = { type: "user", text, id: messageId, from: fromLang, to: toLang };
-      // Only add the original message to the sender's chat history
       setChatHistory((prev) => [...prev, userMessage]);
 
-      // Set loading state for the receiver
       if (speaker === "A") {
         setIsLoadingB(true);
       } else {
@@ -128,7 +121,6 @@ const TwoWayCommunication = () => {
           error: translated.startsWith("Error:") ? translated.replace("Error:", "") : null,
         };
 
-        // Add both original and translated messages to the receiver's chat history
         otherSetChatHistory((prev) => [...prev, translatedMessage]);
 
         const targetLang = languageMap[toLang] || toLang;
@@ -159,11 +151,9 @@ const TwoWayCommunication = () => {
           originalId: messageId,
           error: error.message,
         };
-        // Add error message to receiver's chat history only
         otherSetChatHistory((prev) => [...prev, userMessage, errorMessage]);
         setPersistentError(`Translation failed: ${error.message}`);
       } finally {
-        // Reset loading state
         if (speaker === "A") {
           setIsLoadingB(false);
         } else {
@@ -218,7 +208,6 @@ const TwoWayCommunication = () => {
   const handleMicClickA = useCallback(() => {
     const now = Date.now();
     if (now - lastMicClickRefA.current < micClickInterval) {
-      console.log("Microphone click throttled for Speaker A");
       return;
     }
     lastMicClickRefA.current = now;
@@ -243,7 +232,9 @@ const TwoWayCommunication = () => {
     }
   }, [isListeningB, startSpeechB, stopSpeechB]);
 
-
+  const toggleARotation = () => {
+    setIsARotated((prev) => !prev);
+  };
 
   const getLatestMessagePair = (history) => {
     if (history.length === 0) return null;
@@ -279,68 +270,78 @@ const TwoWayCommunication = () => {
           </div>
         )}
 
-        {/* Split-screen layout for face-to-face conversation */}
         <div className="flex-1 pb-24 flex flex-col justify-between">
-          {/* Speaker A Panel (Top, Rotated 180deg) */}
-          <div className="flex-1 border flex flex-col justify-end p-4 transform rotate-180">
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-2">
-                <Users className="h-6 w-6 text-blue-500" />
-                <h3 className="font-bold text-lg text-gray-900 dark:text-white">Speaker A</h3>
-              </div>
-              <select
-                value={fromA}
-                onChange={(e) => setFromA(e.target.value)}
-                className="text-sm p-1 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white/70 dark:bg-gray-800/50 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
-                aria-label="Select Speaker A language"
-              >
-                {languages.map((lang) => (
-                  <option key={lang.code} value={lang.code}>
-                    {lang.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {latestMessageA ? (
-              <div className="mb-4">
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">{latestMessageA.user.text}</p>
-              </div>
-            ) : (
-              <p className="text-gray-500 dark:text-gray-400 text-center mb-4">Tap the microphone to speak...</p>
-            )}
-            <button
-              className={`mx-auto flex items-center justify-center w-20 h-20 rounded-full transition-all duration-300 ${
-                isListeningA
-                  ? "bg-red-600 animate-pulse"
-                  : "bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
-              } text-white shadow-lg`}
-              onClick={handleMicClickA}
-              aria-label={isListeningA ? "Stop microphone" : "Start microphone"}
-            >
-              {isListeningA ? <Mic className="h-8 w-8" /> : <MicOff className="h-8 w-8" />}
-            </button>
-            <div ref={chatContainerRefA} className="mt-4 max-h-40 overflow-y-auto space-y-2">
-              {chatHistoryA.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.type === "user" ? "justify-start" : "justify-end"}`}
-                >
-                  <div
-                    className={`max-w-[70%] px-3 py-2 rounded-lg text-sm ${
-                      msg.type === "user"
-                        ? "bg-green-500 text-white"
-                        : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-200"
-                    }`}
+          {/* Speaker A Panel (Top, Conditionally Rotated) */}
+          <div className={`flex-1 border flex flex-col justify-end p-4 ${isARotated ? "transform rotate-180" : ""}`}>
+            <div className={isARotated ? "transform rotate-180" : ""}>
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-2">
+                  <Users className={`h-6 w-6 text-blue-500 ${isARotated ? "transform rotate-180" : ""}`} />
+                  <h3 className={`font-bold text-lg text-gray-900 dark:text-white ${isARotated ? "transform rotate-180" : ""}`}>Speaker A</h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={fromA}
+                    onChange={(e) => setFromA(e.target.value)}
+                    className={`text-sm ${isARotated ? "transform rotate-180" : ""} p-1 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white/70 dark:bg-gray-800/50 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600`}
+                    aria-label="Select Speaker A language"
                   >
-                    {msg.text}
-                  </div>
+                    {languages.map((lang) => (
+                      <option key={lang.code} value={lang.code} className={`${isARotated ? "transform rotate-180" : ""}`}>
+                        {lang.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    className="flex items-center justify-center p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all duration-300"
+                    onClick={toggleARotation}
+                    aria-label={isARotated ? "Rotate Speaker A to normal" : "Rotate Speaker A 180 degrees"}
+                  >
+                    <RotateCw className="h-5 w-5" />
+                  </button>
                 </div>
-              ))}
-              {isLoadingA && (
-                <div className="flex justify-end">
-                  <LoadingDots />
+              </div>
+              {latestMessageA ? (
+                <div className="mb-4">
+                  <p className={`text-lg ${isARotated ? "transform rotate-180" : ""} font-semibold text-gray-900 dark:text-white`}>{latestMessageA.user.text}</p>
                 </div>
+              ) : (
+                <p className={`text-gray-500 ${isARotated ? "transform rotate-180" : ""} dark:text-gray-400 text-center mb-4`}>Tap the microphone to speak...</p>
               )}
+              <button
+                className={`mx-auto flex items-center justify-center w-20 h-20 rounded-full transition-all duration-300 ${
+                  isListeningA
+                    ? "bg-red-600 animate-pulse"
+                    : "bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
+                } text-white shadow-lg ${isARotated ? "transform rotate-180" : ""} `}
+                onClick={handleMicClickA}
+                aria-label={isListeningA ? "Stop microphone" : "Start microphone"}
+              >
+                {isListeningA ? <Mic className="h-8 w-8" /> : <MicOff className="h-8 w-8" />}
+              </button>
+              <div ref={chatContainerRefA} className={`mt-4  ${isARotated ? "transform rotate-180" : ""} max-h-40 overflow-y-auto space-y-2`}>
+                {chatHistoryA.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex ${msg.type === "user" ? (isARotated ? "justify-end" : "justify-start") : (isARotated ? "justify-start" : "justify-end")}`}
+                  >
+                    <div
+                      className={`max-w-[70%] px-3 py-2 rounded-lg  text-sm ${
+                        msg.type === "user"
+                          ? "bg-green-500 text-white"
+                          : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-200"
+                      }`}
+                    >
+                      {msg.text}
+                    </div>
+                  </div>
+                ))}
+                {isLoadingA && (
+                  <div className={`flex ${isARotated ? "justify-start" : "justify-end"}`}>
+                    <LoadingDots />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -389,7 +390,6 @@ const TwoWayCommunication = () => {
               {isListeningB ? <Mic className="h-8 w-8" /> : <MicOff className="h-8 w-8" />}
             </button>
             <div ref={chatContainerRefB} className="mt-4 max-h-40 overflow-y-auto space-y-2">
-
               {chatHistoryB.map((msg) => (
                 <div
                   key={msg.id}

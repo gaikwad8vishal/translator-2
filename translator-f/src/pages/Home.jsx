@@ -9,11 +9,9 @@ import TextInput from "../components/TextInput";
 import TextOutput from "../components/TextOutput";
 import { useTranslation } from "../components/useTranslation";
 import { useSpeech } from "../components/UseSpeech";
-import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 
 
-const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
 
 const languages = [
   { code: "as", name: "Assamese" },
@@ -49,17 +47,14 @@ const Translator = () => {
   const [isToOpen, setIsToOpen] = useState(false);
   const [loginWarning, setLoginWarning] = useState("");
   const [detectedLanguage, setDetectedLanguage] = useState("hi");
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [isLiveChatOpen, setIsLiveChatOpen] = useState(false);
   const [isPdfJsLoaded, setIsPdfJsLoaded] = useState(false);
   const [mammoth, setMammoth] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
-  const navigate = useNavigate();
+
   
 
-  const { translatedText, loading: translationLoading, error: translationError, setError: setTranslationError, history, setHistory, translateText } = useTranslation();
+  const { translatedText, loading: translationLoading, error: translationError, setError: setTranslationError, translateText } = useTranslation();
   const { isListening, startSpeechRecognition, stopSpeechRecognition, speakText, error: speechError, setError: setSpeechError } = useSpeech(from, (transcript) => setText((prev) => prev + transcript));
   const { getUserLanguage, error: locationError, setError: setLocationError, loading: locationLoading } = useGeolocation(setTo, setDetectedLanguage);
 
@@ -134,33 +129,6 @@ const Translator = () => {
       translateText(translatedText, to, from).finally(() => setIsTranslating(false));
     }
   }, [from, to, translatedText, translateText]);
-
-  const handleHistoryClick = useCallback(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setLoginWarning("Please log in to view your translation history.");
-      setTimeout(() => setLoginWarning(""), 2010);
-      return;
-    }
-    navigate("/history");
-    setIsChatOpen(false);
-    setIsLiveChatOpen(false);
-    setIsHistoryOpen((prev) => !prev);
-  }, [navigate]);
-
-  const handleChatClick = useCallback(() => {
-    navigate("/single-device");
-    setIsHistoryOpen(false);
-    setIsLiveChatOpen(false);
-    setIsChatOpen((prev) => !prev);
-  }, [navigate]);
-
-  const handleLiveChatClick = useCallback(() => {
-    navigate("/conversation");
-    setIsHistoryOpen(false);
-    setIsChatOpen(false);
-    setIsLiveChatOpen((prev) => !prev);
-  }, [navigate]);
 
   const handleDocumentUpload = useCallback(
   async (event) => {
@@ -247,9 +215,9 @@ const Translator = () => {
     }
   },
   [mammoth, translateText, setTranslationError, isPdfJsLoaded]
-);
+  );
 
-      const handlePhotoUpload = useCallback(
+  const handlePhotoUpload = useCallback(
         async (event) => {
           const file = event.target.files[0];
           if (!file) return;
@@ -283,11 +251,10 @@ const Translator = () => {
           }
         },
         [translateText, setTranslationError]
-      );
+  );
 
       return (
         <>
-        
           <style>
             {`
               @media (max-width: 639px) {

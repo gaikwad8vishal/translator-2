@@ -211,10 +211,8 @@ const TranslationHistory = () => {
     const lang = languages.find((l) => l.code === code) || { name: code };
     const flags = {
       en: "🇺🇸",
-      es: "🇪🇸",
       hi: "🇮🇳",
-      fr: "🇫🇷",
-      de: "🇩🇪",
+      mr: "🇮🇳"
     };
     return `${lang.name} ${flags[code] || ""}`;
   };
