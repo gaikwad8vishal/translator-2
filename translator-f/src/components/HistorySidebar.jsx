@@ -231,7 +231,7 @@ const TranslationHistory = () => {
 
   return (
     <div
-      className={`min-h-screen transition-all duration-500 ${
+      className={`min-h-screen pb-24 transition-all duration-500 ${
         theme === "light"
           ? "bg-gradient-to-br from-purple-100 via-blue-50 to-indigo-100"
           : "bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900"
@@ -240,7 +240,7 @@ const TranslationHistory = () => {
       aria-label="Translation history page"
     >
       <Header />
-      <header className="p-6 border-b backdrop-blur-sm border-white/20">
+      <header className="p-6 border-b  backdrop-blur-sm border-white/20">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
@@ -267,25 +267,25 @@ const TranslationHistory = () => {
       <main className="p-6">
         <div className="max-w-6xl mx-auto space-y-6">
           {/* Search and Filter Section */}
-          <div className="p-6 rounded-2xl backdrop-blur-sm border bg-white/40 border-white/50 relative z-10">
-            <div className="flex flex-col sm:flex-row gap-4 items-center">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  className={`flex h-10 w-full rounded-md border px-3 py-2 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:text-sm pl-10 ${
-                    theme === "light"
-                      ? "bg-white/70 border-gray-200/60 text-gray-900 placeholder:text-gray-500"
-                      : "bg-gray-800/50 border-gray-600 text-white placeholder:text-gray-400"
-                  }`}
-                  placeholder="Search translations..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  aria-label="Search translations"
-                />
-              </div>
-              <div className="flex gap-2 items-center">
-                <div className="relative">
-                  <DatePicker
+          <div className="p-3 sm:p-6 rounded-2xl backdrop-blur-sm border bg-white/40 border-white/50 relative z-10">
+  <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-center">
+    <div className="relative w-full sm:flex-1">
+      <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+      <input
+        className={`flex h-9 w-full rounded-md border px-3 py-2 text-sm sm:text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 pl-8 sm:pl-10 pr-3 ${
+          theme === "light"
+            ? "bg-white/70 border-gray-200/60 text-gray-900 placeholder:text-gray-500"
+            : "bg-gray-800/50 border-gray-600 text-white placeholder:text-gray-400"
+        }`}
+        placeholder="Search translations..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        aria-label="Search translations"
+      />
+    </div>
+    <div className="flex gap-2 items-center w-full sm:w-auto">
+      <div className="relative flex-1 sm:flex-none sm:w-48">
+                   <DatePicker
                     selectsRange
                     startDate={startDate}
                     endDate={endDate}
@@ -327,20 +327,20 @@ const TranslationHistory = () => {
                         },
                       },
                     ]}
-                  />
-                  <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                </div>
-                <button
-                  className="inline-flex items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 h-9 rounded-md px-3 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                  onClick={handleExport}
-                  aria-label="Export history"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Export
-                </button>
-              </div>
-            </div>
-          </div>
+        />
+        <Calendar className="absolute right-2 top-1/2 transform hidden -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+      </div>
+      <button
+        className="inline-flex items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 h-9 rounded-md px-3 sm:px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 min-w-[90px] sm:min-w-[100px]"
+        onClick={handleExport}
+        aria-label="Export history"
+      >
+        <Download className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
+        Export
+      </button>
+    </div>
+  </div>
+</div>
 
           {/* History List */}
           <div className="space-y-4 relative z-0">
