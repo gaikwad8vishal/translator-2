@@ -29,7 +29,7 @@ exports.translateText = async (req, res) => {
     const tokens = tokenizer.tokenize(text);
     const sentimentScore = sentimentAnalyzer.getSentiment(tokens);
     const sentiment = sentimentScore > 0 ? "positive" : sentimentScore < 0 ? "negative" : "neutral";
-    console.log(`AI Analysis: Input text tokens: ${tokens.join(", ")}, Sentiment: ${sentiment}`);
+
 
     // MyMemory API call for translation
     const email = process.env.MYMEMORY_EMAIL || "BoomBoomChao@email.com";
