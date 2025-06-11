@@ -99,10 +99,6 @@ exports.toggleFavorite = async (req, res) => {
   }
 };
 
-const History = require("../models/History");
-const csv = require("fast-csv");
-const { Readable } = require("stream");
-
 // Export history as CSV
 exports.exportHistory = async (req, res) => {
   try {
