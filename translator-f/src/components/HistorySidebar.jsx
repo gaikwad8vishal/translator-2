@@ -90,7 +90,12 @@ const TranslationHistory = () => {
       const token = localStorage.getItem("token");
       const params = {};
       if (startDate) params.startDate = startDate.toISOString();
-      if (endDate) params.endDate = endDate.toISOString();
+      if (endDate) {
+        // Set endDate to the end of the day to include the entire day
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        params.endDate = end.toISOString();
+      }
       const response = await axios.get(`${backendURL}/history/all`, {
         headers: { Authorization: `Bearer ${token}` },
         params,
@@ -98,11 +103,10 @@ const TranslationHistory = () => {
 
       let fetchedHistory = response.data;
 
-      // Frontend fallback: Filter history if startDate or endDate is selected
+      // Frontend fallback (optional, since backend now handles filtering)
       if (startDate || endDate) {
         fetchedHistory = fetchedHistory.filter((item) => {
           const itemDate = new Date(item.createdAt);
-          // Normalize dates to avoid timezone issues by setting time to 00:00:00
           const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
           const start = startDate
             ? new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate())
