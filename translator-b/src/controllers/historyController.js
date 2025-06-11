@@ -99,6 +99,10 @@ exports.toggleFavorite = async (req, res) => {
   }
 };
 
+const History = require("../models/History");
+const csv = require("fast-csv");
+const { Readable } = require("stream");
+
 // Export history as CSV
 exports.exportHistory = async (req, res) => {
   try {
@@ -119,31 +123,48 @@ exports.exportHistory = async (req, res) => {
       favorite: item.favorite ? "Yes" : "No",
     }));
 
-    // Create a readable stream for the CSV data
-    const csvStream = csv.format({ headers: true });
-    const writableStream = new Readable({
-      read() {
-        this.push(null); // End the stream after data is pushed
-      },
-    });
-
-    // Pipe the data to the CSV stream
-    writableStream
-      .pipe(csvStream)
-      .pipe(res, { end: true }); // Pipe the CSV stream to the response
-
-    // Push the data into the stream
-    csvData.forEach((row) => csvStream.write(row));
-    csvStream.end();
-
-    // Set response headers for CSV download
+    // Set response headers for CSV download **before** sending the response
     res.setHeader("Content-Type", "text/csv");
     res.setHeader(
       "Content-Disposition",
       `attachment; filename="translation_history_${new Date().toISOString()}.csv"`
     );
+
+    // Create a readable stream for the CSV data
+    const csvStream = csv.format({ headers: true });
+    const readableStream = new Readable({
+      read() {
+        // Push each row of data into the stream
+        csvData.forEach((row) => this.push(JSON.stringify(row) + "\n"));
+        this.push(null); // End the stream after all data is pushed
+      },
+    });
+
+    // Pipe the data to the CSV stream and then to the response
+    readableStream
+      .pipe(csvStream)
+      .pipe(res, { end: true });
+
+    // Handle stream errors to prevent uncaught exceptions
+    csvStream.on("error", (error) => {
+      console.error("CSV stream error:", error);
+      // If the response hasn't been sent yet, send an error response
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Failed to export history" });
+      }
+    });
+
+    readableStream.on("error", (error) => {
+      console.error("Readable stream error:", error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Failed to export history" });
+      }
+    });
   } catch (error) {
     console.error("Error exporting history:", error);
-    res.status(500).json({ error: "Failed to export history" });
+    // Only send an error response if headers haven't been sent
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Failed to export history" });
+    }
   }
 };
