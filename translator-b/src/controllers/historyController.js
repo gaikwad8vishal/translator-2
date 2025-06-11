@@ -119,46 +119,35 @@ exports.exportHistory = async (req, res) => {
       favorite: item.favorite ? "Yes" : "No",
     }));
 
-    // Set response headers for CSV download **before** sending the response
-    res.setHeader("Content-Type", "text/csv");
+    // Set response headers for CSV download
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
     res.setHeader(
       "Content-Disposition",
       `attachment; filename="translation_history_${new Date().toISOString()}.csv"`
     );
 
-    // Create a readable stream for the CSV data
+    // Create a CSV stream with headers
     const csvStream = csv.format({ headers: true });
-    const readableStream = new Readable({
-      read() {
-        // Push each row of data into the stream
-        csvData.forEach((row) => this.push(JSON.stringify(row) + "\n"));
-        this.push(null); // End the stream after all data is pushed
-      },
-    });
 
-    // Pipe the data to the CSV stream and then to the response
-    readableStream
-      .pipe(csvStream)
-      .pipe(res, { end: true });
+    // Pipe the CSV stream to the response
+    csvStream.pipe(res);
 
-    // Handle stream errors to prevent uncaught exceptions
+    // Write each row to the CSV stream
+    csvData.forEach((row) => csvStream.write(row));
+
+    // End the CSV stream
+    csvStream.end();
+
+    // Handle stream errors
     csvStream.on("error", (error) => {
       console.error("CSV stream error:", error);
-      // If the response hasn't been sent yet, send an error response
       if (!res.headersSent) {
         res.status(500).json({ error: "Failed to export history" });
       }
     });
 
-    readableStream.on("error", (error) => {
-      console.error("Readable stream error:", error);
-      if (!res.headersSent) {
-        res.status(500).json({ error: "Failed to export history" });
-      }
-    });
   } catch (error) {
     console.error("Error exporting history:", error);
-    // Only send an error response if headers haven't been sent
     if (!res.headersSent) {
       res.status(500).json({ error: "Failed to export history" });
     }
