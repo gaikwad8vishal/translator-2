@@ -1,0 +1,23 @@
+{
+  "i am vishal:en:mr:मी विशाल आहे": {
+    "inputText": "i am vishal",
+    "sentiment": "neutral",
+    "userFeedback": "negative",
+    "reward": -1,
+    "translatedText": "मी विशाल आहे"
+  },
+  "i am vishal:en:mr:मी गे आहे.": {
+    "inputText": "i am vishal",
+    "sentiment": "neutral",
+    "userFeedback": "neutral",
+    "reward": 0,
+    "translatedText": "मी गे आहे."
+  },
+  "i am vishal :en:mr:मी विशाल आहे": {
+    "inputText": "i am vishal ",
+    "sentiment": "neutral",
+    "userFeedback": "positive",
+    "reward": 1,
+    "translatedText": "मी विशाल आहे"
+  }
+}
