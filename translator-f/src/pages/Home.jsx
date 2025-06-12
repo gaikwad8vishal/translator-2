@@ -493,7 +493,6 @@ const Translator = () => {
                         text={translatedText}
                         loading={translationLoading || isTranslating}
                         onCopy={() => navigator.clipboard.writeText(translatedText)}
-                        onSpeak={() => speakText(translatedText, to)}
                       />
                     </div>
                   </div>

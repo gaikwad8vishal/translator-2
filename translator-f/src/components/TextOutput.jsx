@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { HiClipboard, HiClipboardCheck } from "react-icons/hi";
-import { Volume2 } from "lucide-react";
 
-const TextOutput = ({ text, loading, onCopy, onSpeak }) => {
+
+const TextOutput = ({ text, loading, onCopy }) => {
   const outputRef = useRef(null);
   const [outputHeight, setOutputHeight] = useState("auto");
   const [copied, setCopied] = useState(false);
@@ -63,14 +63,6 @@ const TextOutput = ({ text, loading, onCopy, onSpeak }) => {
               ) : (
                 <HiClipboard className="h-4 w-4" />
               )}
-            </button>
-            <button
-              onClick={onSpeak}
-              className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 dark:focus-visible:ring-purple-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-9 px-3 transition-all duration-300 border-2 rounded-xl border-purple-300/60 dark:border-purple-600/60 text-purple-700 dark:text-purple-300 hover:bg-purple-100/60 dark:hover:bg-purple-900/60 hover:text-purple-800 dark:hover:text-purple-200"
-              aria-label="Speak output text"
-              disabled={!text}
-            >
-              <Volume2 className="h-4 w-4" />
             </button>
           </div>
         )}
